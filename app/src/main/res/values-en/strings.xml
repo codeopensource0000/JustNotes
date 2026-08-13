@@ -1,0 +1,45 @@
+<resources>
+    <string name="app_name">JustNotes</string>
+
+    <!-- Home screen -->
+    <string name="home_tab_recent">Recent</string>
+    <string name="home_tab_folders">Folders</string>
+    <string name="home_new_note">New note</string>
+
+    <!-- Note editor -->
+    <string name="editor_header_title">Note</string>
+    <string name="editor_back">Back</string>
+    <string name="editor_save">Save</string>
+    <string name="editor_title_placeholder">Title</string>
+    <string name="editor_content_placeholder">Write here…</string>
+    <string name="editor_lock_on">Turn off the secondary lock</string>
+    <string name="editor_lock_off">Turn on the secondary lock</string>
+
+    <!-- PIN setup -->
+    <string name="pin_setup_choose">Choose a code</string>
+    <string name="pin_setup_confirm">Confirm the code</string>
+    <string name="pin_setup_mismatch">The two codes don\'t match, try again</string>
+    <string name="pin_setup_hint">This code will be asked every time you open the app</string>
+
+    <!-- Lock screen -->
+    <string name="lock_enter_code">Enter your code</string>
+    <string name="lock_incorrect_code">Incorrect code, try again</string>
+    <string name="lock_use_code">Use code</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_general">General</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_appearance_system">System</string>
+    <string name="settings_appearance_light">Light</string>
+    <string name="settings_appearance_dark">Dark</string>
+    <string name="settings_section_security">Security</string>
+    <string name="settings_auth_toggle">Authentication on open</string>
+    <string name="settings_auth_toggle_sub">Can be turned off</string>
+    <string name="settings_change_pin">Change code</string>
+
+    <string name="settings_section_secondary_lock">Secondary lock</string>
+    <string name="settings_secondary_pin">Secondary lock code</string>
+    <string name="settings_secondary_pin_sub">Independent from the main code</string>
+    <string name="secondary_lock_title">Secondary lock</string>
+</resources>
