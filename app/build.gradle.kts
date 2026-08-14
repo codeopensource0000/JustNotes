@@ -47,6 +47,11 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.biometric)
+    // Forces a modern androidx.fragment over the ancient 1.2.5 that biometric:1.1.0
+    // pulls in transitively — that old version crashes any rememberLauncherForActivityResult()
+    // call on our FragmentActivity with "Can only use lower 16 bits for requestCode".
+    implementation(libs.androidx.fragment.ktx)
+    implementation(libs.alphacephei.vosk.android)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)

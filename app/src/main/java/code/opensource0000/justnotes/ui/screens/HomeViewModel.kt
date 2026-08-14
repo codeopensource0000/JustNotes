@@ -7,6 +7,8 @@ import code.opensource0000.justnotes.data.local.FolderEntity
 import code.opensource0000.justnotes.data.local.FolderWithNoteCount
 import code.opensource0000.justnotes.data.local.JustNotesDatabase
 import code.opensource0000.justnotes.data.local.NoteEntity
+import code.opensource0000.justnotes.security.NoteEncryption
+import code.opensource0000.justnotes.security.PinManager
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -37,6 +39,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             initialValue = emptyList()
         )
 
+    // Flat list (no note counts) for the "move to folder" picker.
+    val allFolders: StateFlow<List<FolderEntity>> = database.folderDao()
+        .observeAll()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = emptyList()
+        )
+
     init {
         ensureDefaultFolderExists()
     }
@@ -51,6 +62,47 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     FolderEntity(name = FolderEntity.DEFAULT_FOLDER_NAME, isDefault = true)
                 )
             }
+        }
+    }
+
+    fun createFolder(name: String) {
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            database.folderDao().insert(FolderEntity(name = name))
+        }
+    }
+
+    fun deleteNote(note: NoteEntity) {
+        viewModelScope.launch {
+            if (note.isLocked) {
+                PinManager.forNote(getApplication(), note.id).clearPin()
+                NoteEncryption.deleteKey(note.id)
+            }
+            database.noteDao().deleteById(note.id)
+        }
+    }
+
+    fun moveNote(noteId: Long, folderId: Long) {
+        viewModelScope.launch {
+            database.noteDao().updateFolderId(noteId, folderId)
+        }
+    }
+
+    // The default "Non classé" folder is never offered for deletion (see
+    // HomeScreen) — nothing here special-cases it, but callers must not
+    // route it here.
+    fun deleteFolder(folder: FolderWithNoteCount) {
+        viewModelScope.launch {
+            // The DB cascade removes the notes themselves, but not their
+            // PIN/Keystore key — those live outside Room and need clearing
+            // explicitly for any note in this folder that was locked.
+            database.noteDao().getByFolder(folder.id)
+                .filter { it.isLocked }
+                .forEach { note ->
+                    PinManager.forNote(getApplication(), note.id).clearPin()
+                    NoteEncryption.deleteKey(note.id)
+                }
+            database.folderDao().deleteById(folder.id)
         }
     }
 }

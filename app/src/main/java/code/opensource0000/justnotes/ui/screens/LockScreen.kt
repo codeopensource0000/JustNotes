@@ -8,6 +8,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -25,6 +29,7 @@ import code.opensource0000.justnotes.R
 import code.opensource0000.justnotes.security.PinManager
 import code.opensource0000.justnotes.ui.components.PinDots
 import code.opensource0000.justnotes.ui.components.PinPad
+import code.opensource0000.justnotes.ui.theme.WordmarkStyle
 
 @Composable
 fun LockScreen(
@@ -53,11 +58,18 @@ fun LockScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(24.dp),
+                .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(text = stringResource(titleRes), style = MaterialTheme.typography.headlineSmall)
+            Icon(
+                imageVector = Icons.Filled.Lock,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(40.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(text = stringResource(titleRes), style = WordmarkStyle)
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = if (viewModel.error) {

@@ -1,25 +1,69 @@
 <resources>
     <string name="app_name">JustNotes</string>
 
+    <!-- Generic, reusable across screens -->
+    <string name="action_cancel">Cancel</string>
+    <string name="action_delete">Delete</string>
+
     <!-- Home screen -->
     <string name="home_tab_recent">Recent</string>
     <string name="home_tab_folders">Folders</string>
     <string name="home_new_note">New note</string>
+    <string name="home_empty_recent">No notes yet. Tap + to create one.</string>
+    <string name="home_empty_folders">No folders yet.</string>
+    <string name="home_new_folder">New folder</string>
+
+    <!-- Folders (shared: home screen + editor folder picker) -->
+    <string name="folder_new_title">New folder</string>
+    <string name="folder_name_placeholder">Folder name</string>
+    <string name="folder_create">Create</string>
+    <string name="folder_picker_title">Choose a folder</string>
+    <string name="folder_delete_confirm_title">Delete this folder?</string>
+    <string name="folder_delete_confirm_message">The folder "%1$s" and every note inside it will be deleted. This can\'t be undone.</string>
+
+    <!-- Note options (long press on a note) -->
+    <string name="note_move_to_folder">Move to folder</string>
+    <string name="note_delete_confirm_title">Delete this note?</string>
+    <string name="note_delete_confirm_message">This can\'t be undone.</string>
 
     <!-- Note editor -->
     <string name="editor_header_title">Note</string>
     <string name="editor_back">Back</string>
     <string name="editor_save">Save</string>
+    <string name="editor_export">Export</string>
+    <string name="editor_export_choose_title">Export format</string>
+    <string name="editor_export_txt">Plain text (.txt)</string>
+    <string name="editor_export_txt_sub">Opens everywhere, formatting shown as-is (**bold**)</string>
+    <string name="editor_export_md">Markdown (.md)</string>
+    <string name="editor_export_md_sub">True to the format, but few apps open it by default</string>
+    <string name="editor_export_html">Formatted page (.html)</string>
+    <string name="editor_export_html_sub">Opens in any browser, bold/headings/lists shown properly</string>
     <string name="editor_title_placeholder">Title</string>
     <string name="editor_content_placeholder">Write here…</string>
+    <string name="editor_format_bold">Bold</string>
+    <string name="editor_format_italic">Italic</string>
+    <string name="editor_format_heading">Section heading</string>
+    <string name="editor_format_list">Bullet list</string>
+    <string name="editor_format_checklist">Checkbox</string>
+    <string name="editor_format_placeholder">text</string>
+    <string name="editor_format_mic">Voice dictation</string>
+    <string name="editor_format_mic_stop">Stop dictation</string>
+    <string name="editor_mic_permission_denied">Allow microphone access to use voice dictation</string>
+    <string name="editor_mic_model_required">Install the voice model in Settings first</string>
     <string name="editor_lock_on">Turn off the secondary lock</string>
     <string name="editor_lock_off">Turn on the secondary lock</string>
+    <string name="editor_confirm_identity">Confirm your identity</string>
+    <string name="editor_unsaved_title">Unsaved changes</string>
+    <string name="editor_unsaved_message">Do you want to save your changes before leaving?</string>
+    <string name="editor_unsaved_save">Save</string>
+    <string name="editor_unsaved_discard">Don\'t save</string>
 
     <!-- PIN setup -->
     <string name="pin_setup_choose">Choose a code</string>
     <string name="pin_setup_confirm">Confirm the code</string>
     <string name="pin_setup_mismatch">The two codes don\'t match, try again</string>
     <string name="pin_setup_hint">This code will be asked every time you open the app</string>
+    <string name="pin_setup_hint_note">This code will be asked to open this note</string>
 
     <!-- Lock screen -->
     <string name="lock_enter_code">Enter your code</string>
@@ -33,13 +77,27 @@
     <string name="settings_appearance_system">System</string>
     <string name="settings_appearance_light">Light</string>
     <string name="settings_appearance_dark">Dark</string>
+    <string name="settings_app_language">App language</string>
+    <string name="settings_app_language_system">System (follows the phone\'s language)</string>
     <string name="settings_section_security">Security</string>
     <string name="settings_auth_toggle">Authentication on open</string>
     <string name="settings_auth_toggle_sub">Can be turned off</string>
     <string name="settings_change_pin">Change code</string>
 
-    <string name="settings_section_secondary_lock">Secondary lock</string>
-    <string name="settings_secondary_pin">Secondary lock code</string>
-    <string name="settings_secondary_pin_sub">Independent from the main code</string>
+    <string name="settings_autosave">Autosave</string>
+    <string name="settings_autosave_sub">Saves automatically when leaving a note, no confirmation needed</string>
     <string name="secondary_lock_title">Secondary lock</string>
+
+    <string name="settings_section_stt">Voice dictation</string>
+    <string name="settings_stt_description">Fully on-device speech recognition. The models ship inside the app, nothing is downloaded (about 40 MB each, once installed)</string>
+    <string name="settings_stt_language">Dictation language</string>
+    <string name="language_french">French</string>
+    <string name="language_english">English</string>
+    <string name="settings_stt_not_installed">Not installed</string>
+    <string name="settings_stt_install">Install</string>
+    <string name="settings_stt_installing">Installing…</string>
+    <string name="settings_stt_ready">Installed</string>
+    <string name="settings_stt_delete">Delete</string>
+    <string name="settings_stt_error">Install failed, try again</string>
+    <string name="settings_stt_retry">Retry</string>
 </resources>

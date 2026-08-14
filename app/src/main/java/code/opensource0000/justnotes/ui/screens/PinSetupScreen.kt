@@ -1,5 +1,6 @@
 package code.opensource0000.justnotes.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -23,8 +24,20 @@ import code.opensource0000.justnotes.ui.components.PinPad
 @Composable
 fun PinSetupScreen(
     onComplete: () -> Unit,
+    // hintTextRes lets a note's own PIN setup show note-specific wording
+    // instead of the primary-lock default ("asked every time you open the app").
+    hintTextRes: Int = R.string.pin_setup_hint,
+    // Primary setup (fresh install) already has nothing to go back to, so it
+    // never needed this; a note's lock, opened from an already-open editor,
+    // does — otherwise the system back button could leave the note marked
+    // locked with no code ever actually set for it.
+    blockSystemBack: Boolean = false,
     viewModel: AuthSetupViewModel = viewModel()
 ) {
+    if (blockSystemBack) {
+        BackHandler {}
+    }
+
     // Scaffold (rather than a bare Column) paints the themed background,
     // matching the other screens.
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -32,7 +45,7 @@ fun PinSetupScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(24.dp),
+                .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -49,7 +62,7 @@ fun PinSetupScreen(
                 text = if (viewModel.mismatchError) {
                     stringResource(R.string.pin_setup_mismatch)
                 } else {
-                    stringResource(R.string.pin_setup_hint)
+                    stringResource(hintTextRes)
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = if (viewModel.mismatchError) {

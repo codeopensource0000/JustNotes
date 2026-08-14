@@ -9,10 +9,11 @@ import javax.crypto.spec.PBEKeySpec
 // Stores only a salted PBKDF2 hash of the PIN, never the PIN itself — the same
 // principle as a server storing password hashes, applied locally.
 //
-// One instance manages exactly one PIN. The app has two independent PINs
-// (primary app lock, secondary per-note lock), each backed by its own
-// SharedPreferences file so they can never collide or be confused with one
-// another — construct via forPrimary()/forSecondary() rather than directly.
+// One instance manages exactly one PIN. The app has the primary app-open PIN
+// plus one independent secondary-lock PIN per protected note (each note's
+// code is unrelated to every other note's — cracking one doesn't help with
+// any other), each backed by its own SharedPreferences file — construct via
+// forPrimary()/forNote() rather than directly.
 class PinManager private constructor(context: Context, prefsName: String) {
 
     private val prefs = context.applicationContext
@@ -45,6 +46,13 @@ class PinManager private constructor(context: Context, prefsName: String) {
         return candidateHash == storedHash
     }
 
+    // Called when a note's secondary lock is turned off — the code becomes
+    // meaningless once nothing is encrypted with the key it used to gate, so
+    // there's no reason to keep it around.
+    fun clearPin() {
+        prefs.edit().remove(KEY_SALT).remove(KEY_HASH).apply()
+    }
+
     private fun hash(pin: String, salt: ByteArray): ByteArray {
         val spec = PBEKeySpec(pin.toCharArray(), salt, PBKDF2_ITERATIONS, PBKDF2_KEY_LENGTH_BITS)
         val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
@@ -54,10 +62,10 @@ class PinManager private constructor(context: Context, prefsName: String) {
     companion object {
         const val PIN_LENGTH = 4
 
-        // Unchanged from before this class supported two purposes, so the
+        // Unchanged from before this class supported per-note PINs, so the
         // primary PIN already saved on installed devices keeps working.
         private const val PREFS_NAME_PRIMARY = "justnotes_security"
-        private const val PREFS_NAME_SECONDARY = "justnotes_security_secondary"
+        private const val PREFS_NAME_NOTE_PREFIX = "justnotes_note_pin_"
 
         private const val KEY_SALT = "pin_salt"
         private const val KEY_HASH = "pin_hash"
@@ -68,6 +76,7 @@ class PinManager private constructor(context: Context, prefsName: String) {
 
         fun forPrimary(context: Context): PinManager = PinManager(context, PREFS_NAME_PRIMARY)
 
-        fun forSecondary(context: Context): PinManager = PinManager(context, PREFS_NAME_SECONDARY)
+        fun forNote(context: Context, noteId: Long): PinManager =
+            PinManager(context, "$PREFS_NAME_NOTE_PREFIX$noteId")
     }
 }

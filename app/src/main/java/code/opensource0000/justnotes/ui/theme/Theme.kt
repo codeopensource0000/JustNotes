@@ -11,26 +11,49 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
+// tertiary is JustNotes' amber, reserved for anything tied to the secondary
+// lock (e.g. the lock icon tint on a protected note in the Recents list) —
+// never used as a general-purpose accent, to keep that meaning unambiguous.
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = DarkAccent,
+    onPrimary = DarkAccentOn,
+    primaryContainer = DarkAccentSoft,
+    onPrimaryContainer = DarkAccentSoftOn,
+    tertiary = DarkLock,
+    onTertiary = DarkLockOn,
+    tertiaryContainer = DarkLockSoft,
+    onTertiaryContainer = DarkLockSoftOn,
+    background = DarkBackground,
+    onBackground = DarkInk,
+    surface = DarkSurface,
+    onSurface = DarkInk,
+    surfaceVariant = DarkSurfaceVariant,
+    onSurfaceVariant = DarkInkMuted,
+    outline = DarkInkFaint,
+    outlineVariant = DarkBorder,
+    error = DarkDanger,
+    onError = DarkDangerOn
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    primary = LightAccent,
+    onPrimary = LightAccentOn,
+    primaryContainer = LightAccentSoft,
+    onPrimaryContainer = LightAccentSoftOn,
+    tertiary = LightLock,
+    onTertiary = LightLockOn,
+    tertiaryContainer = LightLockSoft,
+    onTertiaryContainer = LightLockSoftOn,
+    background = LightBackground,
+    onBackground = LightInk,
+    surface = LightSurface,
+    onSurface = LightInk,
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = LightInkMuted,
+    outline = LightInkFaint,
+    outlineVariant = LightBorder,
+    error = LightDanger,
+    onError = LightDangerOn
 )
 
 @Composable

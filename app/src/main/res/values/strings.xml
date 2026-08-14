@@ -1,25 +1,69 @@
 <resources>
     <string name="app_name">JustNotes</string>
 
+    <!-- Generic, reusable across screens -->
+    <string name="action_cancel">Annuler</string>
+    <string name="action_delete">Supprimer</string>
+
     <!-- Home screen -->
     <string name="home_tab_recent">Récents</string>
     <string name="home_tab_folders">Dossiers</string>
     <string name="home_new_note">Nouvelle note</string>
+    <string name="home_empty_recent">Aucune note pour l\'instant. Touchez + pour en créer une.</string>
+    <string name="home_empty_folders">Aucun dossier pour l\'instant.</string>
+    <string name="home_new_folder">Nouveau dossier</string>
+
+    <!-- Folders (shared: home screen + editor folder picker) -->
+    <string name="folder_new_title">Nouveau dossier</string>
+    <string name="folder_name_placeholder">Nom du dossier</string>
+    <string name="folder_create">Créer</string>
+    <string name="folder_picker_title">Choisir un dossier</string>
+    <string name="folder_delete_confirm_title">Supprimer ce dossier ?</string>
+    <string name="folder_delete_confirm_message">Le dossier « %1$s » et toutes les notes qu\'il contient seront supprimés. Cette action est irréversible.</string>
+
+    <!-- Note options (long press on a note) -->
+    <string name="note_move_to_folder">Déplacer vers un dossier</string>
+    <string name="note_delete_confirm_title">Supprimer cette note ?</string>
+    <string name="note_delete_confirm_message">Cette action est irréversible.</string>
 
     <!-- Note editor -->
     <string name="editor_header_title">Note</string>
     <string name="editor_back">Retour</string>
     <string name="editor_save">Enregistrer</string>
+    <string name="editor_export">Exporter</string>
+    <string name="editor_export_choose_title">Format d\'export</string>
+    <string name="editor_export_txt">Texte brut (.txt)</string>
+    <string name="editor_export_txt_sub">S\'ouvre partout, mise en forme affichée telle quelle (**gras**)</string>
+    <string name="editor_export_md">Markdown (.md)</string>
+    <string name="editor_export_md_sub">Fidèle au format, mais peu d\'apps l\'ouvrent par défaut</string>
+    <string name="editor_export_html">Page mise en forme (.html)</string>
+    <string name="editor_export_html_sub">S\'ouvre dans n\'importe quel navigateur, gras/titres/listes visibles</string>
     <string name="editor_title_placeholder">Titre</string>
     <string name="editor_content_placeholder">Écrivez ici…</string>
+    <string name="editor_format_bold">Gras</string>
+    <string name="editor_format_italic">Italique</string>
+    <string name="editor_format_heading">Titre de section</string>
+    <string name="editor_format_list">Liste à puces</string>
+    <string name="editor_format_checklist">Case à cocher</string>
+    <string name="editor_format_placeholder">texte</string>
+    <string name="editor_format_mic">Dictée vocale</string>
+    <string name="editor_format_mic_stop">Arrêter la dictée</string>
+    <string name="editor_mic_permission_denied">Autorisez l\'accès au micro pour utiliser la dictée vocale</string>
+    <string name="editor_mic_model_required">Installez d\'abord le modèle vocal dans Paramètres</string>
     <string name="editor_lock_on">Désactiver le cadenas secondaire</string>
     <string name="editor_lock_off">Activer le cadenas secondaire</string>
+    <string name="editor_confirm_identity">Confirmez votre identité</string>
+    <string name="editor_unsaved_title">Modifications non enregistrées</string>
+    <string name="editor_unsaved_message">Voulez-vous enregistrer vos modifications avant de quitter ?</string>
+    <string name="editor_unsaved_save">Enregistrer</string>
+    <string name="editor_unsaved_discard">Ne pas enregistrer</string>
 
     <!-- PIN setup -->
     <string name="pin_setup_choose">Choisissez un code</string>
     <string name="pin_setup_confirm">Confirmez le code</string>
     <string name="pin_setup_mismatch">Les deux codes ne correspondent pas, réessayez</string>
     <string name="pin_setup_hint">Ce code sera demandé à chaque ouverture de l\'app</string>
+    <string name="pin_setup_hint_note">Ce code sera demandé pour ouvrir cette note</string>
 
     <!-- Lock screen -->
     <string name="lock_enter_code">Entrez votre code</string>
@@ -33,13 +77,27 @@
     <string name="settings_appearance_system">Système</string>
     <string name="settings_appearance_light">Clair</string>
     <string name="settings_appearance_dark">Sombre</string>
+    <string name="settings_app_language">Langue de l\'application</string>
+    <string name="settings_app_language_system">Système (suit la langue du téléphone)</string>
     <string name="settings_section_security">Sécurité</string>
     <string name="settings_auth_toggle">Authentification à l\'ouverture</string>
     <string name="settings_auth_toggle_sub">Désactivable</string>
     <string name="settings_change_pin">Modifier le code</string>
 
-    <string name="settings_section_secondary_lock">Cadenas secondaire</string>
-    <string name="settings_secondary_pin">Code du cadenas secondaire</string>
-    <string name="settings_secondary_pin_sub">Indépendant du code principal</string>
+    <string name="settings_autosave">Enregistrement automatique</string>
+    <string name="settings_autosave_sub">Enregistre en quittant une note, sans demander de confirmation</string>
     <string name="secondary_lock_title">Cadenas secondaire</string>
+
+    <string name="settings_section_stt">Dictée vocale</string>
+    <string name="settings_stt_description">Reconnaissance vocale entièrement locale. Les modèles sont inclus dans l\'application, rien n\'est téléchargé (environ 40 Mo chacun, une fois installés)</string>
+    <string name="settings_stt_language">Langue de dictée</string>
+    <string name="language_french">Français</string>
+    <string name="language_english">Anglais</string>
+    <string name="settings_stt_not_installed">Non installé</string>
+    <string name="settings_stt_install">Installer</string>
+    <string name="settings_stt_installing">Installation…</string>
+    <string name="settings_stt_ready">Installé</string>
+    <string name="settings_stt_delete">Supprimer</string>
+    <string name="settings_stt_error">Échec de l\'installation, réessayez</string>
+    <string name="settings_stt_retry">Réessayer</string>
 </resources>

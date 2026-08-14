@@ -23,4 +23,15 @@ interface NoteDao {
 
     @Query("SELECT * FROM notes WHERE folderId = :folderId ORDER BY updatedAt DESC")
     fun observeByFolder(folderId: Long): Flow<List<NoteEntity>>
+
+    // One-shot (not a Flow): used when deleting a folder, to find which of
+    // its notes were locked before the cascade removes their rows.
+    @Query("SELECT * FROM notes WHERE folderId = :folderId")
+    suspend fun getByFolder(folderId: Long): List<NoteEntity>
+
+    @Query("DELETE FROM notes WHERE id = :id")
+    suspend fun deleteById(id: Long)
+
+    @Query("UPDATE notes SET folderId = :folderId WHERE id = :id")
+    suspend fun updateFolderId(id: Long, folderId: Long)
 }

@@ -37,4 +37,18 @@ interface FolderDao {
 
     @Query("SELECT * FROM folders WHERE isDefault = 1 LIMIT 1")
     suspend fun getDefaultFolder(): FolderEntity?
+
+    @Query("SELECT * FROM folders WHERE id = :id")
+    suspend fun getById(id: Long): FolderEntity?
+
+    // Plain list (no note counts) for pickers — e.g. choosing a note's folder
+    // in the editor, where showing "3 notes" next to each option adds noise.
+    @Query("SELECT * FROM folders ORDER BY isDefault DESC, name ASC")
+    fun observeAll(): Flow<List<FolderEntity>>
+
+    // Room enables SQLite foreign keys for every connection it opens, so the
+    // notes table's ON DELETE CASCADE (see NoteEntity) fires here too — the
+    // folder's own notes are removed along with it, not left orphaned.
+    @Query("DELETE FROM folders WHERE id = :id")
+    suspend fun deleteById(id: Long)
 }
