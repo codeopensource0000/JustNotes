@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Follows the *system* dark setting, which is all the starting window
+         can know: it is drawn before any app code runs, so the in-app theme
+         override (Settings > Apparence) cannot reach it. Choosing Dark in the
+         app while the phone is in light mode still flashes light for a frame. -->
+    <style name="Theme.JustNotes" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+</resources>

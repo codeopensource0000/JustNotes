@@ -35,6 +35,7 @@ import code.opensource0000.justnotes.ui.components.EmptyState
 import code.opensource0000.justnotes.ui.components.MoveToFolderDialog
 import code.opensource0000.justnotes.ui.components.NoteOptionsDialog
 import code.opensource0000.justnotes.ui.components.NoteRow
+import code.opensource0000.justnotes.ui.components.folderLabel
 
 @Composable
 fun FolderScreen(
@@ -113,7 +114,10 @@ fun FolderScreen(
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.editor_back))
                 }
-                Text(text = viewModel.folderName, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = folderLabel(viewModel.folderName, viewModel.folderIsDefault),
+                    style = MaterialTheme.typography.titleMedium
+                )
             }
 
             if (notes.isEmpty()) {

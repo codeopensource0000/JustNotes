@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -53,6 +54,7 @@ import code.opensource0000.justnotes.ui.components.MoveToFolderDialog
 import code.opensource0000.justnotes.ui.components.NewFolderDialog
 import code.opensource0000.justnotes.ui.components.NoteOptionsDialog
 import code.opensource0000.justnotes.ui.components.NoteRow
+import code.opensource0000.justnotes.ui.components.folderLabel
 import code.opensource0000.justnotes.ui.theme.JustNotesTheme
 import code.opensource0000.justnotes.ui.theme.WordmarkStyle
 
@@ -327,9 +329,18 @@ private fun FolderRow(folder: FolderWithNoteCount, onClick: () -> Unit, onLongCl
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = folder.name, style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    text = "${folder.noteCount} notes",
+                    text = folderLabel(folder.name, folder.isDefault),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    // A plurals resource rather than "$n notes": the count was
+                    // hardcoded in English and read "1 notes" at one.
+                    text = pluralStringResource(
+                        R.plurals.folder_note_count,
+                        folder.noteCount,
+                        folder.noteCount
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

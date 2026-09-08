@@ -26,7 +26,7 @@ fun MoveToFolderDialog(
             Column {
                 folders.forEach { folder ->
                     RadioRow(
-                        text = folder.name,
+                        text = folderLabel(folder.name, folder.isDefault),
                         selected = folder.id == currentFolderId,
                         onClick = { onSelect(folder.id) }
                     )
