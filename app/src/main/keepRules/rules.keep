@@ -1,12 +1,38 @@
-# Add project specific R8 rules here.
-# AGP will combine all keep rule files in src/main/keepRules to pass to R8
+# R8 keep rules. AGP combines every file in src/main/keepRules and passes the
+# result to R8.
 #
-# For more details, see
-#   https://d.android.com/r/tools/r8/keep-rules
+# Almost nothing here is needed for ordinary Kotlin code: R8 follows normal
+# call graphs perfectly well, and Room, Compose and Navigation all ship their
+# own rules inside their artifacts. What R8 cannot see is code reached from
+# outside the JVM — which, in this app, means the speech recogniser.
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# --- Vosk / JNA -------------------------------------------------------------
+#
+# Vosk is a native library driven through JNA. JNA maps Java classes onto C
+# structs and functions by *name*, at runtime, via reflection: rename or remove
+# one and the mapping fails with an UnsatisfiedLinkError that only appears in a
+# minified build. Nothing in the bytecode tells R8 these are used, so they are
+# kept wholesale.
+-keep class org.vosk.** { *; }
+-keep class com.sun.jna.** { *; }
+-keep class * implements com.sun.jna.Library { *; }
+-keep class * extends com.sun.jna.Structure { *; }
+-keep class * extends com.sun.jna.PointerType { *; }
+
+# JNA looks these up reflectively on the classes above.
+-keepclassmembers class * extends com.sun.jna.Structure {
+    public <fields>;
+}
+
+# JNA references optional platform classes that are not present on Android.
+-dontwarn java.awt.**
+-dontwarn com.sun.jna.**
+
+# --- Room -------------------------------------------------------------------
+#
+# Room generates its implementations at build time and ships consumer rules for
+# them, so nothing is needed here. The entities are kept because their column
+# names are matched by field name in the generated cursor readers.
+-keepclassmembers class code.opensource0000.justnotes.data.local.** {
+    <fields>;
+}

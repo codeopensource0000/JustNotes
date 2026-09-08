@@ -1,11 +1,22 @@
+# Declared versions are kept equal to what Gradle actually resolves. They used
+# to differ by several minor releases — the template's originals were never
+# touched while newer libraries were added around them — so the catalogue
+# described a build nobody was shipping. Aligning them changes no bytes in the
+# APK; it just makes this file true again.
+#
+# biometric stays at 1.1.0 deliberately: Android Lint checks every dependency
+# here for updates and does not flag it, so 1.1.0 is the current stable. It is
+# also what drags in the ancient fragment version worked around in
+# app/build.gradle.kts, and it now underpins the CryptoObject flow behind the
+# per-note fingerprint shortcut — a bump there deserves its own test pass.
 [versions]
 agp = "9.3.1"
-coreKtx = "1.10.1"
+coreKtx = "1.16.0"
 junit = "4.13.2"
-junitVersion = "1.1.5"
-espressoCore = "3.5.1"
-lifecycleRuntimeKtx = "2.6.1"
-activityCompose = "1.8.0"
+junitVersion = "1.3.0"
+espressoCore = "3.7.0"
+lifecycleRuntimeKtx = "2.9.4"
+activityCompose = "1.8.2"
 kotlin = "2.2.10"
 composeBom = "2026.02.01"
 room = "2.8.4"

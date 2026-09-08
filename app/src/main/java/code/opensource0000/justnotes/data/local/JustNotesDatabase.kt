@@ -8,8 +8,12 @@ import androidx.room.RoomDatabase
 @Database(
     entities = [FolderEntity::class, NoteEntity::class],
     version = 1,
-    // We are not shipping schema history files yet; fine for early development.
-    exportSchema = false
+    // Writes app/schemas/<db>/<version>.json at build time, and those files are
+    // committed. They are the reference every future migration is written and
+    // tested against — and version 1's schema can only be captured before
+    // version 1 ships. Without them, changing the schema later means either
+    // guessing at the migration or wiping everyone's notes.
+    exportSchema = true
 )
 abstract class JustNotesDatabase : RoomDatabase() {
 

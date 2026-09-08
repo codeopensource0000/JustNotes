@@ -1,7 +1,20 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+}
+
+// Signing credentials live in keystore.properties, which is git-ignored and
+// never committed. Its absence is deliberately not an error: anyone cloning
+// this repository can still build and run the app without owning the release
+// key — assembleRelease simply produces an unsigned APK for them.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
 }
 
 android {
@@ -14,17 +27,53 @@ android {
         applicationId = "code.opensource0000.justnotes"
         minSdk = 26
         targetSdk = 37
+        // versionCode is what Android compares to decide "is this an
+        // update?" — it must increase with every published build and never
+        // go backwards. versionName is what people read, and follows semver
+        // (see CHANGELOG.md). The two are deliberately independent: a
+        // re-publish of the same version bumps the code, not the name.
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (keystoreProperties.isNotEmpty()) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                // v2 is what actually gets verified on minSdk 26; v3 adds the
+                // ability to rotate to a new signing key later without every
+                // installed copy refusing the update. Cheap to enable now,
+                // impossible to add retroactively once versions are out.
+                enableV2Signing = true
+                enableV3Signing = true
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // R8: shrinks and obfuscates. It matters more here than the APK
+            // size suggests — material-icons-extended alone carries thousands
+            // of vector icons of which this app draws about thirty, and with
+            // optimization off every one of them shipped.
+            //
+            // Anything reached only from native code has to be kept by hand;
+            // see app/src/main/keepRules/rules.keep for Vosk and JNA.
             optimization {
-                enable = false
+                enable = true
             }
+            // Null when keystore.properties is absent, which leaves the APK
+            // unsigned rather than failing the build.
+            signingConfig = signingConfigs.findByName("release")
+        }
+        debug {
+            // Lets a debug build sit alongside an installed release one.
+            applicationIdSuffix = ".debug"
         }
     }
     compileOptions {
@@ -34,6 +83,25 @@ android {
     buildFeatures {
         compose = true
     }
+
+    bundle {
+        language {
+            // Mandatory here, and the failure is invisible in testing. Play
+            // normally strips an AAB down to the device's system language —
+            // but this app switches its own language from Settings, so a
+            // stripped install would simply have no resources for the other
+            // one and the picker would silently do nothing. Only ever shows up
+            // after publishing, never in a locally built APK.
+            enableSplit = false
+        }
+    }
+}
+
+// Where Room writes the exported schema (see JustNotesDatabase.exportSchema).
+// These JSON files are committed on purpose: they are the baseline for every
+// future migration.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {
