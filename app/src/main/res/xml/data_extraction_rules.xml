@@ -1,19 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+   Data extraction rules for API 31 and above.
+
+   Two separate channels have to be shut, and android:allowBackup="false"
+   only closes the first one:
+
+   - cloud-backup    upload to the user's Google Drive. Disabled by
+                     allowBackup="false"; excluded again here so the rule
+                     survives that attribute changing.
+   - device-transfer the phone-to-phone migration assistant. This one keeps
+                     working on API 31+ *despite* allowBackup="false", so an
+                     explicit exclusion is the only thing that stops it.
+
+   Blocking device-transfer is a deliberate trade-off: changing phones means
+   starting fresh (or exporting notes one by one) rather than carrying the
+   database across. Letting it through would be worse than it looks — the
+   Keystore keys behind the per-note locks are never transferable, so
+   locked notes would land on the new phone as ciphertext nobody can read.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="root" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="external" path="." />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="root" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="external" path="." />
     </device-transfer>
-    -->
 </data-extraction-rules>

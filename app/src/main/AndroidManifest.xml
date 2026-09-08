@@ -7,8 +7,17 @@
          audio ever leaves the phone). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+    <!-- allowBackup="false": the whole point of this app is that nothing
+         leaves the device. Left at the template's "true", Android's own
+         backup service would upload the notes database and every
+         preferences file (including the PIN salts and hashes) to the
+         user's Google Drive — no INTERNET permission required, since the
+         transfer is done by a system process, not by us.
+         The two rules files below stay wired up as defence in depth: they
+         spell out the same exclusions, so flipping this attribute back on
+         by accident still wouldn't hand anything over. -->
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -19,7 +28,6 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.JustNotes"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
