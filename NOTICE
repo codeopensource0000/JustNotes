@@ -1,0 +1,45 @@
+JustNotes
+Copyright 2026 The JustNotes Authors
+
+This product includes software developed as part of the following projects.
+
+--------------------------------------------------------------------------
+Vosk (vosk-api / vosk-android)
+https://github.com/alphacep/vosk-api
+Copyright Alpha Cephei Inc.
+Licensed under the Apache License, Version 2.0.
+
+Used for fully on-device speech recognition. The library is pulled in as a
+Gradle dependency (com.alphacephei:vosk-android).
+
+--------------------------------------------------------------------------
+Vosk speech recognition models
+https://alphacephei.com/vosk/models
+Copyright Alpha Cephei Inc.
+Licensed under the Apache License, Version 2.0.
+
+Two models are redistributed verbatim inside this application, as assets:
+
+  app/src/main/assets/vosk-model-fr.zip  -> vosk-model-small-fr-0.22
+  app/src/main/assets/vosk-model-en.zip  -> vosk-model-small-en-us-0.15
+
+They are unmodified copies of the archives published at the URL above.
+Bundling them rather than downloading them at runtime is what allows the
+app to work without ever opening a network connection, and accounts for
+most of its installed size.
+
+--------------------------------------------------------------------------
+AndroidX / Jetpack (androidx.*), including Compose, Room, Navigation,
+Lifecycle, Activity, Fragment, Core and Biometric
+https://developer.android.com/jetpack
+Copyright The Android Open Source Project
+Licensed under the Apache License, Version 2.0.
+
+--------------------------------------------------------------------------
+Java Native Access (JNA)
+https://github.com/java-native-access/jna
+Licensed under the Apache License, Version 2.0 (dual-licensed with LGPL 2.1;
+this product uses it under the Apache License, Version 2.0).
+
+Pulled in transitively by vosk-android, which uses it to call into the
+native recognition library.
