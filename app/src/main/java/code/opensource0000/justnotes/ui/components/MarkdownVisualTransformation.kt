@@ -70,7 +70,11 @@ object MarkdownVisualTransformation : VisualTransformation {
 
     // Marker characters to drop from the displayed text: "**"/"*" pairs
     // around bold/italic content, and the "# " prefix on headings.
-    private fun collectHiddenRanges(original: String): List<IntRange> {
+    // internal, not private: this and buildTransformedText below are the
+    // only genuinely tricky logic in the file — hand-rolled index arithmetic
+    // whose mistakes shift a cursor by one character rather than crashing.
+    // Unit tests reach them directly, without needing a Compose runtime.
+    internal fun collectHiddenRanges(original: String): List<IntRange> {
         val ranges = mutableListOf<IntRange>()
         headingRegex.findAll(original).forEach { match ->
             ranges += match.range.first until (match.range.first + 2)
@@ -88,7 +92,7 @@ object MarkdownVisualTransformation : VisualTransformation {
         return ranges.sortedBy { it.first }
     }
 
-    private data class TransformResult(
+    internal data class TransformResult(
         val text: String,
         // originalToTransformed[i] = position in the displayed text that
         // corresponds to original character index i (0..original.length).
@@ -98,7 +102,7 @@ object MarkdownVisualTransformation : VisualTransformation {
         val transformedToOriginal: IntArray
     )
 
-    private fun buildTransformedText(original: String, hiddenRanges: List<IntRange>): TransformResult {
+    internal fun buildTransformedText(original: String, hiddenRanges: List<IntRange>): TransformResult {
         val builder = StringBuilder()
         val origToTrans = IntArray(original.length + 1)
         var oi = 0
