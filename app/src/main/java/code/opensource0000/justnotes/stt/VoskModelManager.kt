@@ -51,7 +51,11 @@ class VoskModelManager private constructor(context: Context) {
             extractZip(language)
             language.readyMarker(appContext).createNewFile()
             stateFlow.value = VoskModelState.READY
-        } catch (e: IOException) {
+        } catch (e: Exception) {
+            // Deliberately broader than IOException: anything escaping here
+            // used to leave the state pinned at INSTALLING forever, turning
+            // the Settings button into a spinner that never stops and offers
+            // no way to retry.
             language.modelDir(appContext).deleteRecursively()
             stateFlow.value = VoskModelState.ERROR
         }
@@ -70,6 +74,14 @@ class VoskModelManager private constructor(context: Context) {
                 val relativePath = entry.name.substringAfter('/', missingDelimiterValue = "")
                 if (relativePath.isNotEmpty()) {
                     val outFile = File(targetDir, relativePath)
+                    // Zip Slip guard. The archive is a build asset, so this is
+                    // not exploitable today — but an entry named "../.." would
+                    // write anywhere the app can, and the check costs nothing.
+                    // Any scanner reading this repository would flag its
+                    // absence, and rightly.
+                    if (!outFile.canonicalPath.startsWith(targetDir.canonicalPath + File.separator)) {
+                        throw IOException("Zip entry escapes the target directory: ${entry.name}")
+                    }
                     if (entry.isDirectory) {
                         outFile.mkdirs()
                     } else {
@@ -84,6 +96,11 @@ class VoskModelManager private constructor(context: Context) {
     }
 
     fun delete(language: DictationLanguage) {
+        // Release the loaded copy before the files under it disappear —
+        // otherwise a cached Model keeps pointing at a deleted directory and
+        // the next dictation session is undefined behaviour.
+        VoiceDictationManager.getInstance(appContext)
+            .releaseModel(language.modelDir(appContext).absolutePath)
         language.modelDir(appContext).deleteRecursively()
         language.readyMarker(appContext).delete()
         states.getValue(language).value = VoskModelState.NOT_INSTALLED

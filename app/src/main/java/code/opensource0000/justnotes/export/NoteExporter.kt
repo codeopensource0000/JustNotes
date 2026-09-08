@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 enum class ExportFormat(val extension: String, val mimeType: String) {
     // .txt: opens on any phone with any text viewer, but shows raw "**"/"#"
@@ -33,21 +35,23 @@ object NoteExporter {
     // handed a content:// URI it may not have finished reading. Clearing at
     // launch instead bounds the exposure to a single session, which is the
     // best that can be done without breaking the share itself.
+    // Blocking: call it from an IO dispatcher, as MainActivity does.
     fun purgeCache(context: Context) {
         val exportDir = File(context.cacheDir, EXPORT_DIR_NAME)
         if (exportDir.exists()) exportDir.deleteRecursively()
     }
 
-    fun export(context: Context, title: String, content: String, format: ExportFormat) {
-        val exportDir = File(context.cacheDir, EXPORT_DIR_NAME).apply { mkdirs() }
-        val file = File(exportDir, fileNameFor(title, format))
-        file.writeText(renderContent(title, content, format))
-
-        val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file
-        )
+    // suspend, because rendering and writing a note is real file I/O and this
+    // is reached straight from a tap: on a long note it stuttered the frame it
+    // was called on. Only the write moves off the main thread — startActivity
+    // has to stay on it.
+    suspend fun export(context: Context, title: String, content: String, format: ExportFormat) {
+        val uri = withContext(Dispatchers.IO) {
+            val exportDir = File(context.cacheDir, EXPORT_DIR_NAME).apply { mkdirs() }
+            val file = File(exportDir, fileNameFor(title, format))
+            file.writeText(renderContent(title, content, format))
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        }
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = format.mimeType
             putExtra(Intent.EXTRA_STREAM, uri)

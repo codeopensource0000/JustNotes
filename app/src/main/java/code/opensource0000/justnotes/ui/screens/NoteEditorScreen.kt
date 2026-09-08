@@ -223,7 +223,11 @@ fun NoteEditorScreen(
                         subtitle = stringResource(R.string.editor_export_txt_sub),
                         onClick = {
                             showExportDialog = false
-                            activity?.let { NoteExporter.export(it, viewModel.title, viewModel.content, ExportFormat.PLAIN_TEXT) }
+                            activity?.let { act ->
+                                coroutineScope.launch {
+                                    NoteExporter.export(act, viewModel.title, viewModel.content, ExportFormat.PLAIN_TEXT)
+                                }
+                            }
                         }
                     )
                     ExportFormatRow(
@@ -231,7 +235,11 @@ fun NoteEditorScreen(
                         subtitle = stringResource(R.string.editor_export_md_sub),
                         onClick = {
                             showExportDialog = false
-                            activity?.let { NoteExporter.export(it, viewModel.title, viewModel.content, ExportFormat.MARKDOWN) }
+                            activity?.let { act ->
+                                coroutineScope.launch {
+                                    NoteExporter.export(act, viewModel.title, viewModel.content, ExportFormat.MARKDOWN)
+                                }
+                            }
                         }
                     )
                     ExportFormatRow(
@@ -239,7 +247,11 @@ fun NoteEditorScreen(
                         subtitle = stringResource(R.string.editor_export_html_sub),
                         onClick = {
                             showExportDialog = false
-                            activity?.let { NoteExporter.export(it, viewModel.title, viewModel.content, ExportFormat.HTML) }
+                            activity?.let { act ->
+                                coroutineScope.launch {
+                                    NoteExporter.export(act, viewModel.title, viewModel.content, ExportFormat.HTML)
+                                }
+                            }
                         }
                     )
                 }

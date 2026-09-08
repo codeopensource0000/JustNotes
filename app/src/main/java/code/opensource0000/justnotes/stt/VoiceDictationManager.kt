@@ -17,13 +17,27 @@ class VoiceDictationManager private constructor(context: Context) {
     // the French and English models doesn't force a reload every time —
     // each one loads once and stays cached for the rest of the app session.
     private val cachedModels = mutableMapOf<String, Model>()
+
+    // The cache is filled from a background dispatcher and read from another,
+    // so every touch of it goes through this lock. A plain map here was a race
+    // waiting for the day two dictation sessions started at once.
+    private val modelLock = Any()
+
     private var recognizer: Recognizer? = null
     private var speechService: SpeechService? = null
 
     // Blocking (reads the model files from disk) — call from a background
     // dispatcher, matching how NoteEditorViewModel wraps its own crypto calls.
-    private fun loadModel(modelPath: String): Model {
-        return cachedModels.getOrPut(modelPath) { Model(modelPath) }
+    private fun loadModel(modelPath: String): Model = synchronized(modelLock) {
+        cachedModels.getOrPut(modelPath) { Model(modelPath) }
+    }
+
+    // Closes the cached model for a path and forgets it. Called before the
+    // files under it are deleted: a Model holds native memory and an open
+    // view of those files, so dropping the reference alone would both leak
+    // tens of megabytes and leave a handle onto a directory about to vanish.
+    fun releaseModel(modelPath: String) = synchronized(modelLock) {
+        cachedModels.remove(modelPath)?.close()
     }
 
     // onUtterance fires once per recognized phrase (Vosk detects sentence
@@ -33,6 +47,11 @@ class VoiceDictationManager private constructor(context: Context) {
     // the main thread by SpeechService internally, so it's safe to mutate
     // Compose state directly from onUtterance/onError.
     fun startListening(modelPath: String, onUtterance: (String) -> Unit, onError: (Exception) -> Unit) {
+        // Starting twice used to strand the previous SpeechService and
+        // Recognizer, holding the microphone and native memory with nothing
+        // left pointing at them. The editor's isListening flag makes that
+        // unlikely, but the guard belongs here, next to what it protects.
+        stopListening()
         try {
             val model = loadModel(modelPath)
             val newRecognizer = Recognizer(model, SAMPLE_RATE)
