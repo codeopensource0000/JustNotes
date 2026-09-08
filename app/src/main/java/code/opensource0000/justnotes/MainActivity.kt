@@ -13,6 +13,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.lifecycle.lifecycleScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -37,6 +38,8 @@ import code.opensource0000.justnotes.ui.screens.NoteEditorScreen
 import code.opensource0000.justnotes.ui.screens.PinSetupScreen
 import code.opensource0000.justnotes.ui.screens.SettingsScreen
 import code.opensource0000.justnotes.ui.theme.JustNotesTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 // Route names as plain strings for now (kept simple while there are only a
 // handful of screens); worth revisiting for type safety once navigation grows.
@@ -83,6 +86,31 @@ class MainActivity : FragmentActivity() {
         backgroundedAt = SystemClock.elapsedRealtime()
     }
 
+    // Re-asserted on every resume, not just at creation and when the setting
+    // changes. Window flags are state held by the system on our behalf, and
+    // the one failure that matters here is silent: nothing tells the app if
+    // the flag is not in force, it just quietly becomes screenshottable.
+    // Re-applying costs nothing and removes a whole class of "it was set once
+    // and something dropped it" doubt.
+    override fun onResume() {
+        super.onResume()
+        applyScreenshotPolicy()
+    }
+
+    // The single place that decides whether this window is capturable, so the
+    // three callers cannot drift apart.
+    private fun applyScreenshotPolicy() {
+        val allowed = SettingsManager.getInstance(this).screenshotsAllowed.value
+        if (allowed) {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        } else {
+            window.setFlags(
+                WindowManager.LayoutParams.FLAG_SECURE,
+                WindowManager.LayoutParams.FLAG_SECURE
+            )
+        }
+    }
+
     override fun onStart() {
         super.onStart()
         // backgroundedAt is 0 on the very first start, which is already
@@ -98,19 +126,15 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Secure until told otherwise, set before any content is drawn so a
-        // protected window is never briefly capturable at launch. The user's
-        // choice is applied just below, once Compose can observe it.
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_SECURE,
-            WindowManager.LayoutParams.FLAG_SECURE
-        )
+        // Applied before any content is drawn, so the window is never briefly
+        // capturable at launch.
+        applyScreenshotPolicy()
         // Exported notes are written to the cache and handed to the share
         // sheet, which means the plain text of a locked note can outlive the
         // note itself. Clearing at launch bounds how long that lasts; the
         // files cannot be deleted right after sharing, since the receiving
         // app may still be reading them.
-        NoteExporter.purgeCache(this)
+        lifecycleScope.launch(Dispatchers.IO) { NoteExporter.purgeCache(this@MainActivity) }
         enableEdgeToEdge()
         setContent {
             val context = LocalContext.current
@@ -127,16 +151,7 @@ class MainActivity : FragmentActivity() {
             // user has explicitly allowed them — a change that costs a trip
             // through the lock screen, see ROUTE_REAUTH_FOR_SCREENSHOTS.
             val screenshotsAllowed by settingsManager.screenshotsAllowed.collectAsState()
-            LaunchedEffect(screenshotsAllowed) {
-                if (screenshotsAllowed) {
-                    window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
-                } else {
-                    window.setFlags(
-                        WindowManager.LayoutParams.FLAG_SECURE,
-                        WindowManager.LayoutParams.FLAG_SECURE
-                    )
-                }
-            }
+            LaunchedEffect(screenshotsAllowed) { applyScreenshotPolicy() }
             val useDarkTheme = when (themeMode) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.LIGHT -> false
