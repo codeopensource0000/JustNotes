@@ -1,8 +1,8 @@
 package code.opensource0000.justnotes.ui.screens
 
 import android.app.Application
-import android.security.keystore.UserNotAuthenticatedException
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextRange
@@ -13,6 +13,8 @@ import code.opensource0000.justnotes.data.local.FolderEntity
 import code.opensource0000.justnotes.data.local.JustNotesDatabase
 import code.opensource0000.justnotes.data.local.NoteEntity
 import code.opensource0000.justnotes.security.NoteEncryption
+import code.opensource0000.justnotes.security.NoteKeySession
+import code.opensource0000.justnotes.security.NoteSecrets
 import code.opensource0000.justnotes.security.PinManager
 import code.opensource0000.justnotes.settings.SettingsManager
 import code.opensource0000.justnotes.stt.VoiceDictationManager
@@ -24,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.security.GeneralSecurityException
 
 class NoteEditorViewModel(private val application: Application) : AndroidViewModel(application) {
 
@@ -58,10 +61,15 @@ class NoteEditorViewModel(private val application: Application) : AndroidViewMod
     // load(); for a new one it's resolved to the default folder as soon as
     // the screen opens (initializeNewNoteFolderIfNeeded()), so the picker
     // always has a meaningful current value even before the first save.
-    var folderId by mutableStateOf(0L)
+    var folderId by mutableLongStateOf(0L)
         private set
 
     var folderName by mutableStateOf("")
+        private set
+
+    // Tracked alongside the name so the screen can show the localised label
+    // for the catch-all folder rather than its frozen stored name.
+    var folderIsDefault by mutableStateOf(false)
         private set
 
     // All folders, for the picker dialog — plain list (no note counts, unlike
@@ -70,16 +78,20 @@ class NoteEditorViewModel(private val application: Application) : AndroidViewMod
         .observeAll()
         .stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = emptyList())
 
-    fun selectFolder(id: Long, name: String) {
-        folderId = id
-        folderName = name
+    fun selectFolder(folder: FolderEntity) {
+        folderId = folder.id
+        folderName = folder.name
+        folderIsDefault = folder.isDefault
     }
 
     fun createFolderAndSelect(name: String) {
         if (name.isBlank()) return
         viewModelScope.launch {
             val newId = database.folderDao().insert(FolderEntity(name = name))
-            selectFolder(newId, name)
+            folderId = newId
+            folderName = name
+            // A folder the user just created is never the catch-all one.
+            folderIsDefault = false
         }
     }
 
@@ -98,6 +110,7 @@ class NoteEditorViewModel(private val application: Application) : AndroidViewMod
                 ?: return@launch
             folderId = folder.id
             folderName = folder.name
+            folderIsDefault = folder.isDefault
             lastSavedFolderId = folder.id
         }
     }
@@ -117,14 +130,14 @@ class NoteEditorViewModel(private val application: Application) : AndroidViewMod
     // so the second call still thought it was inserting a brand new note.
     private var saveInFlight = false
 
-    // True when the Keystore refused to encrypt/decrypt because the last
-    // system authentication is too old (or never happened this session) —
-    // the screen should show a system confirm-identity prompt, then call
-    // onSystemAuthSucceeded() to retry whatever was interrupted.
-    var needsSystemAuth by mutableStateOf(false)
+    // Set when a locked note's stored bytes could not be turned back into
+    // text. With the key derived from the code the user just typed, a wrong
+    // key is no longer possible here, so in practice this means damaged data —
+    // rare, but it must not be silent: the editor would otherwise show an
+    // empty note and cheerfully save that emptiness over the real content.
+    // Everything that writes checks this flag first.
+    var contentUnreadable by mutableStateOf(false)
         private set
-
-    private var pendingRetry: (() -> Unit)? = null
 
     // Snapshot of title/content/isLocked as of the last successful load or
     // save. isDirty compares the live editor state against it; reading these
@@ -137,17 +150,22 @@ class NoteEditorViewModel(private val application: Application) : AndroidViewMod
     private var lastSavedIsLocked = false
     private var lastSavedFolderId = 0L
 
+    // Always false once the content could not be read: there is nothing on
+    // screen worth keeping, so leaving must not offer to save it.
     val isDirty: Boolean
-        get() = title != lastSavedTitle ||
-            content != lastSavedContent ||
-            isLocked != lastSavedIsLocked ||
-            folderId != lastSavedFolderId
+        get() = !contentUnreadable && (
+            title != lastSavedTitle ||
+                content != lastSavedContent ||
+                isLocked != lastSavedIsLocked ||
+                folderId != lastSavedFolderId
+            )
 
-    fun onSystemAuthSucceeded() {
-        needsSystemAuth = false
-        val retry = pendingRetry
-        pendingRetry = null
-        retry?.invoke()
+    // Refreshes the snapshot isDirty compares against, after a load or a save.
+    private fun snapshotSavedState() {
+        lastSavedTitle = title
+        lastSavedContent = content
+        lastSavedIsLocked = isLocked
+        lastSavedFolderId = folderId
     }
 
     fun onTitleChange(value: String) {
@@ -231,14 +249,10 @@ class NoteEditorViewModel(private val application: Application) : AndroidViewMod
     // Save button and being kicked back out to Home), a brand new note is
     // saved silently here, staying on this screen throughout.
     fun toggleLocked() {
+        if (contentUnreadable) return
         if (isLocked) {
             val id = editingNoteId ?: return
-            // Turning protection off: this note's code and key become
-            // meaningless once nothing is encrypted with them — clear both
-            // rather than leaving stale secrets around for no reason.
-            PinManager.forNote(application, id).clearPin()
-            NoteEncryption.deleteKey(id)
-            isLocked = false
+            unlockNote(id)
             return
         }
         val id = editingNoteId
@@ -247,6 +261,45 @@ class NoteEditorViewModel(private val application: Application) : AndroidViewMod
             return
         }
         lockNoteWithId(id)
+    }
+
+    // Turning protection off. The order below is the whole point: the
+    // database still holds the encrypted copy and the plain text only exists
+    // in memory, so this note's code and key have to outlive the write that
+    // puts the plain text back.
+    //
+    // Clearing them first — as this used to — meant that leaving without
+    // saving ("Ne pas enregistrer", or the app being killed) left behind a
+    // ciphertext whose key no longer existed, still marked locked, with its
+    // PIN already wiped. The note was then unreadable *and* unopenable, with
+    // nothing on screen to say so.
+    //
+    // Consequence, accepted deliberately: unlocking saves the note there and
+    // then, in-progress text edits included. Locking a brand new note already
+    // works that way (see the comment above toggleLocked), so the editor
+    // stays consistent with itself. Keeping the key instead of destroying it
+    // would avoid the save, but then re-locking the note later would silently
+    // reuse the old code the user believes they removed — worse.
+    private fun unlockNote(id: Long) {
+        if (saveInFlight || contentUnreadable) return
+        saveInFlight = true
+        isLocked = false
+        viewModelScope.launch {
+            try {
+                // isLocked is false by now, so this stores plain text.
+                persistNote(content)
+                // Only here is the code no longer protecting anything. Since
+                // the code *is* the key, clearing it is the whole cleanup —
+                // there is no second secret to keep in step any more. If the
+                // write above threw we never get this far, and the note stays
+                // locked and readable: the failure leans the safe way.
+                withContext(Dispatchers.Default) {
+                    NoteSecrets.forget(application, id)
+                }
+            } finally {
+                saveInFlight = false
+            }
+        }
     }
 
     private fun lockNoteWithId(id: Long) {
@@ -310,6 +363,10 @@ class NoteEditorViewModel(private val application: Application) : AndroidViewMod
         if (isListening) {
             dictationManager.stopListening()
         }
+        // The derived key must not outlive the screen that needed it: leaving
+        // the editor means the next visit has to go through the lock screen
+        // and type the code again.
+        editingNoteId?.let(NoteKeySession::forget)
     }
 
     // Called once, when the editor opens for an existing note. Safe to call
@@ -327,35 +384,49 @@ class NoteEditorViewModel(private val application: Application) : AndroidViewMod
             isLocked = note.isLocked
             title = note.title
             folderId = note.folderId
-            folderName = database.folderDao().getById(note.folderId)?.name ?: ""
+            val folder = database.folderDao().getById(note.folderId)
+            folderName = folder?.name ?: ""
+            folderIsDefault = folder?.isDefault == true
             if (!note.isLocked) {
                 contentField = TextFieldValue(note.content)
-                lastSavedTitle = title
-                lastSavedContent = content
-                lastSavedIsLocked = isLocked
-                lastSavedFolderId = folderId
+                snapshotSavedState()
+                return@launch
+            }
+            // Put there by the secondary-lock screen when the user typed this
+            // note's code. Arriving here without it should be impossible —
+            // every route to a locked note goes through that screen — so treat
+            // it as unreadable rather than showing a blank note that could
+            // then be saved over the real one.
+            val key = NoteKeySession.get(note.id)
+            if (key == null) {
+                contentUnreadable = true
                 return@launch
             }
             try {
                 // Decryption is fast but still real crypto work; keep it off
-                // the main thread like every other Keystore/PBKDF2 operation.
-                val decrypted = withContext(Dispatchers.Default) { NoteEncryption.decrypt(note.id, note.content) }
+                // the main thread like every other PBKDF2/cipher operation.
+                val decrypted = withContext(Dispatchers.Default) {
+                    NoteEncryption.decrypt(key, note.content)
+                }
                 contentField = TextFieldValue(decrypted)
-                lastSavedTitle = title
-                lastSavedContent = content
-                lastSavedIsLocked = isLocked
-                lastSavedFolderId = folderId
-            } catch (e: UserNotAuthenticatedException) {
-                // The biometric prompt on the secondary-lock screen usually
-                // already satisfies this; this only triggers when the code
-                // fallback was used instead, or the validity window lapsed.
-                needsSystemAuth = true
-                pendingRetry = { performLoad(noteId) }
+                snapshotSavedState()
+            } catch (_: GeneralSecurityException) {
+                // Covers the whole family at once: a failed GCM tag check
+                // (AEADBadTagException), a malformed key, anything the cipher
+                // refuses. None of them are recoverable, and all of them mean
+                // the same thing to the person holding the phone.
+                contentUnreadable = true
             }
         }
     }
 
     fun save(onFinished: () -> Unit) {
+        // Nothing on screen is worth writing, and writing it would overwrite
+        // the stored bytes we failed to read. Let the caller navigate away.
+        if (contentUnreadable) {
+            onFinished()
+            return
+        }
         if (saveInFlight) return
         saveInFlight = true
         performSave(onFinished)
@@ -364,64 +435,67 @@ class NoteEditorViewModel(private val application: Application) : AndroidViewMod
     private fun performSave(onFinished: () -> Unit) {
         viewModelScope.launch {
             try {
-                val now = System.currentTimeMillis()
                 // The in-memory content is always plain text; encrypt it only
                 // for the copy that actually reaches the database. isLocked
                 // can only be true once editingNoteId is set (toggleLocked()
                 // requires the note to already be saved), so this id is safe.
                 val storedContent = if (isLocked) {
                     val id = editingNoteId ?: return@launch
-                    try {
-                        withContext(Dispatchers.Default) { NoteEncryption.encrypt(id, content) }
-                    } catch (e: UserNotAuthenticatedException) {
-                        needsSystemAuth = true
-                        pendingRetry = { performSave(onFinished) }
-                        return@launch
-                    }
+                    // No key means no way to write this note back without
+                    // destroying it: bail out rather than store plain text in
+                    // a row flagged as locked.
+                    val key = NoteKeySession.get(id) ?: return@launch
+                    withContext(Dispatchers.Default) { NoteEncryption.encrypt(key, content) }
                 } else {
                     content
                 }
-                val currentId = editingNoteId
-                if (currentId == null) {
-                    // folderId is already resolved by initializeNewNoteFolderIfNeeded()
-                    // (the default folder, unless the user picked a different one).
-                    val insertedId = database.noteDao().insert(
-                        NoteEntity(
-                            folderId = folderId,
-                            title = title,
-                            content = storedContent,
-                            isLocked = isLocked,
-                            createdAt = now,
-                            updatedAt = now
-                        )
-                    )
-                    // From here on this note exists in the database: remember
-                    // its id so a follow-up save() updates it instead of
-                    // inserting a second row.
-                    editingNoteId = insertedId
-                    editingCreatedAt = now
-                } else {
-                    database.noteDao().update(
-                        NoteEntity(
-                            id = currentId,
-                            folderId = folderId,
-                            title = title,
-                            content = storedContent,
-                            isLocked = isLocked,
-                            createdAt = editingCreatedAt,
-                            updatedAt = now
-                        )
-                    )
-                }
-                lastSavedTitle = title
-                lastSavedContent = content
-                lastSavedIsLocked = isLocked
-                lastSavedFolderId = folderId
+                persistNote(storedContent)
                 onFinished()
             } finally {
                 saveInFlight = false
             }
         }
+    }
+
+    // The database half of a save, shared by performSave() and unlockNote():
+    // insert the first time, update from then on, then refresh the snapshot
+    // isDirty compares against. storedContent is a parameter rather than read
+    // from `content` directly because only the caller knows whether it was
+    // supposed to be encrypted on the way in.
+    private suspend fun persistNote(storedContent: String) {
+        val now = System.currentTimeMillis()
+        val currentId = editingNoteId
+        if (currentId == null) {
+            // folderId is already resolved by initializeNewNoteFolderIfNeeded()
+            // (the default folder, unless the user picked a different one).
+            val insertedId = database.noteDao().insert(
+                NoteEntity(
+                    folderId = folderId,
+                    title = title,
+                    content = storedContent,
+                    isLocked = isLocked,
+                    createdAt = now,
+                    updatedAt = now
+                )
+            )
+            // From here on this note exists in the database: remember its id
+            // so a follow-up save() updates it instead of inserting a second row.
+            editingNoteId = insertedId
+            editingCreatedAt = now
+        } else {
+            database.noteDao().update(
+                NoteEntity(
+                    id = currentId,
+                    folderId = folderId,
+                    title = title,
+                    content = storedContent,
+                    isLocked = isLocked,
+                    createdAt = editingCreatedAt,
+                    updatedAt = now
+                )
+            )
+        }
+        snapshotSavedState()
     }
 
     // A note that was never saved (editingNoteId still null) has nothing in
@@ -434,8 +508,9 @@ class NoteEditorViewModel(private val application: Application) : AndroidViewMod
         }
         viewModelScope.launch {
             if (isLocked) {
-                PinManager.forNote(application, id).clearPin()
-                NoteEncryption.deleteKey(id)
+                withContext(Dispatchers.Default) {
+                    NoteSecrets.forget(application, id)
+                }
             }
             database.noteDao().deleteById(id)
             onFinished()

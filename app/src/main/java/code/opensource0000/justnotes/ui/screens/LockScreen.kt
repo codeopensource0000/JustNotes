@@ -1,5 +1,6 @@
 package code.opensource0000.justnotes.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +31,7 @@ import code.opensource0000.justnotes.security.PinManager
 import code.opensource0000.justnotes.ui.components.PinDots
 import code.opensource0000.justnotes.ui.components.PinPad
 import code.opensource0000.justnotes.ui.theme.WordmarkStyle
+import javax.crypto.Cipher
 
 @Composable
 fun LockScreen(
@@ -38,16 +40,46 @@ fun LockScreen(
     // passes R.string.secondary_lock_title instead, both as the on-screen
     // heading and as the title of the OS biometric prompt.
     titleRes: Int = R.string.app_name,
+    // The primary lock is a gate and nothing else, so the fingerprint sensor
+    // can open it. A note's secondary lock cannot work that way: its content
+    // key is derived from the code itself (see PinManager.unlock),
+    // and no biometric check can reconstruct it. Offering the sensor there
+    // would open a note the app is then unable to decrypt — and would quietly
+    // make the per-note code optional, which is the opposite of the point.
+    allowBiometrics: Boolean = true,
+    // The re-lock that appears on returning to a backgrounded app sits on top
+    // of whatever the user was doing; letting system back dismiss it would
+    // make the lock decorative.
+    blockSystemBack: Boolean = false,
     viewModel: AuthUnlockViewModel = viewModel()
 ) {
+    if (blockSystemBack) {
+        BackHandler {}
+    }
+
     val activity = LocalContext.current as? FragmentActivity
 
     // Runs once when this screen first appears (not on every recomposition,
     // e.g. not again after a wrong PIN triggers the error state): auto-prompt
     // the sensor immediately, Revolut-style, rather than waiting for a tap.
     LaunchedEffect(Unit) {
-        if (activity != null && canAuthenticateWithBiometrics(activity)) {
-            showBiometricPrompt(activity, titleRes = titleRes, onSuccess = onUnlocked)
+        if (!allowBiometrics || activity == null) return@LaunchedEffect
+        if (!canAuthenticateWithBiometrics(activity)) return@LaunchedEffect
+
+        if (!viewModel.biometricsUnlockContent) {
+            // Primary lock: nothing to decrypt, so a plain yes/no check is all
+            // this needs.
+            showBiometricPrompt(activity, titleRes, cipher = null) { onUnlocked() }
+            return@LaunchedEffect
+        }
+        // A note: the fingerprint has to unwrap this note's content key, so it
+        // is bound to a specific cipher. No cipher means no shortcut was
+        // enrolled, or its Keystore key died — the code pad below covers both.
+        val cipher = viewModel.biometricUnlockCipher() ?: return@LaunchedEffect
+        showBiometricPrompt(activity, titleRes, cipher) { authenticated ->
+            if (authenticated != null) {
+                viewModel.onBiometricUnlocked(authenticated, onUnlocked)
+            }
         }
     }
 
@@ -71,14 +103,16 @@ fun LockScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Text(text = stringResource(titleRes), style = WordmarkStyle)
             Spacer(modifier = Modifier.height(8.dp))
+            val lockoutSeconds = viewModel.lockoutSeconds
+            val isLockedOut = lockoutSeconds > 0
             Text(
-                text = if (viewModel.error) {
-                    stringResource(R.string.lock_incorrect_code)
-                } else {
-                    stringResource(R.string.lock_enter_code)
+                text = when {
+                    isLockedOut -> stringResource(R.string.lock_too_many_attempts, lockoutSeconds)
+                    viewModel.error -> stringResource(R.string.lock_incorrect_code)
+                    else -> stringResource(R.string.lock_enter_code)
                 },
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (viewModel.error) {
+                color = if (isLockedOut || viewModel.error) {
                     MaterialTheme.colorScheme.error
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
@@ -89,7 +123,8 @@ fun LockScreen(
             Spacer(modifier = Modifier.height(32.dp))
             PinPad(
                 onDigit = { digit -> viewModel.onDigit(digit, onUnlocked = onUnlocked) },
-                onDelete = viewModel::onDelete
+                onDelete = viewModel::onDelete,
+                enabled = !isLockedOut
             )
         }
     }
@@ -101,11 +136,20 @@ private fun canAuthenticateWithBiometrics(activity: FragmentActivity): Boolean {
         BiometricManager.BIOMETRIC_SUCCESS
 }
 
-private fun showBiometricPrompt(activity: FragmentActivity, titleRes: Int, onSuccess: () -> Unit) {
+// cipher non-null ties the scan to one cipher operation: the OS only releases
+// the authenticated cipher on success, which is what lets a fingerprint
+// produce a note's content key instead of merely asserting who is holding the
+// phone. onSuccess receives it back, or null for a plain unbound check.
+private fun showBiometricPrompt(
+    activity: FragmentActivity,
+    titleRes: Int,
+    cipher: Cipher?,
+    onSuccess: (Cipher?) -> Unit
+) {
     val executor = ContextCompat.getMainExecutor(activity)
     val callback = object : BiometricPrompt.AuthenticationCallback() {
         override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-            onSuccess()
+            onSuccess(result.cryptoObject?.cipher)
         }
         // onAuthenticationError and onAuthenticationFailed are intentionally
         // left as no-ops: the PIN pad is already on screen as the fallback,
@@ -118,5 +162,10 @@ private fun showBiometricPrompt(activity: FragmentActivity, titleRes: Int, onSuc
         .setTitle(activity.getString(titleRes))
         .setNegativeButtonText(activity.getString(R.string.lock_use_code))
         .build()
-    BiometricPrompt(activity, executor, callback).authenticate(promptInfo)
+    val prompt = BiometricPrompt(activity, executor, callback)
+    if (cipher != null) {
+        prompt.authenticate(promptInfo, BiometricPrompt.CryptoObject(cipher))
+    } else {
+        prompt.authenticate(promptInfo)
+    }
 }

@@ -12,6 +12,11 @@
     <string name="home_empty_recent">No notes yet. Tap + to create one.</string>
     <string name="home_empty_folders">No folders yet.</string>
     <string name="home_new_folder">New folder</string>
+    <string name="folder_default_name">Unsorted</string>
+    <plurals name="folder_note_count">
+        <item quantity="one">%d note</item>
+        <item quantity="other">%d notes</item>
+    </plurals>
 
     <!-- Folders (shared: home screen + editor folder picker) -->
     <string name="folder_new_title">New folder</string>
@@ -52,7 +57,8 @@
     <string name="editor_mic_model_required">Install the voice model in Settings first</string>
     <string name="editor_lock_on">Turn off the secondary lock</string>
     <string name="editor_lock_off">Turn on the secondary lock</string>
-    <string name="editor_confirm_identity">Confirm your identity</string>
+    <string name="editor_content_unreadable_title">Content unreadable</string>
+    <string name="editor_content_unreadable_message">This note\'s encrypted content could not be decrypted. The note has not been modified — you can leave it as it is, or delete it.</string>
     <string name="editor_unsaved_title">Unsaved changes</string>
     <string name="editor_unsaved_message">Do you want to save your changes before leaving?</string>
     <string name="editor_unsaved_save">Save</string>
@@ -69,6 +75,8 @@
     <string name="lock_enter_code">Enter your code</string>
     <string name="lock_incorrect_code">Incorrect code, try again</string>
     <string name="lock_use_code">Use code</string>
+    <string name="lock_too_many_attempts">Too many attempts. Try again in %1$d s</string>
+    <string name="pin_pad_delete">Delete last digit</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
@@ -82,7 +90,14 @@
     <string name="settings_section_security">Security</string>
     <string name="settings_auth_toggle">Authentication on open</string>
     <string name="settings_auth_toggle_sub">Can be turned off</string>
+    <string name="settings_biometric_notes">Fingerprint for locked notes</string>
+    <string name="settings_biometric_notes_sub">Open a protected note without typing its code. The code always keeps working, and turning this off erases the saved fingerprints.</string>
+    <string name="settings_screenshots">Allow screenshots</string>
+    <string name="settings_screenshots_sub">When off, the app shows up blank in screenshots, screen recordings and the task switcher preview. Turning it on asks for your code.</string>
     <string name="settings_change_pin">Change code</string>
+    <string name="note_biometric_enrol_title">Enable fingerprint</string>
+    <string name="note_biometric_enrol_subtitle">To open this note without typing its code</string>
+    <string name="note_biometric_enrol_skip">Not now</string>
 
     <string name="settings_autosave">Autosave</string>
     <string name="settings_autosave_sub">Saves automatically when leaving a note, no confirmation needed</string>

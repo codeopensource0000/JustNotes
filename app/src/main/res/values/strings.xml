@@ -12,6 +12,11 @@
     <string name="home_empty_recent">Aucune note pour l\'instant. Touchez + pour en créer une.</string>
     <string name="home_empty_folders">Aucun dossier pour l\'instant.</string>
     <string name="home_new_folder">Nouveau dossier</string>
+    <string name="folder_default_name">Non classé</string>
+    <plurals name="folder_note_count">
+        <item quantity="one">%d note</item>
+        <item quantity="other">%d notes</item>
+    </plurals>
 
     <!-- Folders (shared: home screen + editor folder picker) -->
     <string name="folder_new_title">Nouveau dossier</string>
@@ -52,7 +57,8 @@
     <string name="editor_mic_model_required">Installez d\'abord le modèle vocal dans Paramètres</string>
     <string name="editor_lock_on">Désactiver le cadenas secondaire</string>
     <string name="editor_lock_off">Activer le cadenas secondaire</string>
-    <string name="editor_confirm_identity">Confirmez votre identité</string>
+    <string name="editor_content_unreadable_title">Contenu illisible</string>
+    <string name="editor_content_unreadable_message">Le contenu chiffré de cette note n\'a pas pu être déchiffré. La note n\'a pas été modifiée : vous pouvez la laisser telle quelle ou la supprimer.</string>
     <string name="editor_unsaved_title">Modifications non enregistrées</string>
     <string name="editor_unsaved_message">Voulez-vous enregistrer vos modifications avant de quitter ?</string>
     <string name="editor_unsaved_save">Enregistrer</string>
@@ -69,6 +75,8 @@
     <string name="lock_enter_code">Entrez votre code</string>
     <string name="lock_incorrect_code">Code incorrect, réessayez</string>
     <string name="lock_use_code">Utiliser le code</string>
+    <string name="lock_too_many_attempts">Trop de tentatives. Réessayez dans %1$d s</string>
+    <string name="pin_pad_delete">Effacer le dernier chiffre</string>
 
     <!-- Settings -->
     <string name="settings_title">Paramètres</string>
@@ -82,7 +90,14 @@
     <string name="settings_section_security">Sécurité</string>
     <string name="settings_auth_toggle">Authentification à l\'ouverture</string>
     <string name="settings_auth_toggle_sub">Désactivable</string>
+    <string name="settings_biometric_notes">Empreinte pour les notes verrouillées</string>
+    <string name="settings_biometric_notes_sub">Ouvre une note protégée sans taper son code. Le code fonctionne toujours, et désactiver ce réglage efface les empreintes enregistrées.</string>
+    <string name="settings_screenshots">Autoriser les captures d\'écran</string>
+    <string name="settings_screenshots_sub">Désactivé, l\'app apparaît vide dans les captures, les enregistrements d\'écran et l\'aperçu du sélecteur de tâches. L\'activer demande votre code.</string>
     <string name="settings_change_pin">Modifier le code</string>
+    <string name="note_biometric_enrol_title">Activer l\'empreinte</string>
+    <string name="note_biometric_enrol_subtitle">Pour ouvrir cette note sans taper son code</string>
+    <string name="note_biometric_enrol_skip">Plus tard</string>
 
     <string name="settings_autosave">Enregistrement automatique</string>
     <string name="settings_autosave_sub">Enregistre en quittant une note, sans demander de confirmation</string>

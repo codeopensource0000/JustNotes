@@ -3,11 +3,15 @@ package code.opensource0000.justnotes
 import android.app.Application
 import android.content.Context
 import android.os.Bundle
+import android.os.SystemClock
+import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
@@ -17,6 +21,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import code.opensource0000.justnotes.export.NoteExporter
 import code.opensource0000.justnotes.security.PinManager
 import code.opensource0000.justnotes.settings.LocaleContextWrapper
 import code.opensource0000.justnotes.settings.SettingsManager
@@ -43,12 +48,28 @@ private const val ARG_NOTE_ID = "noteId"
 private const val ARG_FOLDER_ID = "folderId"
 private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_REAUTH_FOR_CHANGE_PIN = "reauth_change_pin"
+private const val ROUTE_REAUTH_FOR_DISABLE_AUTH = "reauth_disable_auth"
+private const val ROUTE_REAUTH_FOR_SCREENSHOTS = "reauth_screenshots"
+private const val ROUTE_RELOCK = "relock"
+
+// How long the app may sit in the background before the lock screen comes
+// back. Long enough to glance at a notification or paste something in from
+// another app without being challenged; short enough that a phone left on a
+// table is not left open.
+private const val RELOCK_GRACE_MILLIS = 60_000L
 private const val ROUTE_CHANGE_PIN = "change_pin"
 private const val ROUTE_SECONDARY_LOCK = "secondary_lock/{noteId}"
 private const val ROUTE_NOTE_PIN_SETUP = "note_pin_setup/{noteId}"
 private const val ROUTE_FOLDER = "folder/{folderId}"
 
 class MainActivity : FragmentActivity() {
+
+    // When the app was last backgrounded, and whether coming back should put
+    // the lock screen up. elapsedRealtime rather than the wall clock: the
+    // grace period must not be extendable by changing the phone's time.
+    private var backgroundedAt = 0L
+    private val relockRequested = mutableStateOf(false)
+
     // Applies the user's chosen app display language (Settings > Général),
     // independent of the phone's system language — read before onCreate,
     // so every string resource resolved from here on already uses it.
@@ -57,8 +78,39 @@ class MainActivity : FragmentActivity() {
         super.attachBaseContext(LocaleContextWrapper.wrap(newBase, language))
     }
 
+    override fun onStop() {
+        super.onStop()
+        backgroundedAt = SystemClock.elapsedRealtime()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // backgroundedAt is 0 on the very first start, which is already
+        // handled by startDestination below.
+        if (backgroundedAt == 0L) return
+        val awayMillis = SystemClock.elapsedRealtime() - backgroundedAt
+        if (awayMillis < RELOCK_GRACE_MILLIS) return
+        val pinManager = PinManager.forPrimary(this)
+        if (pinManager.hasPin() && pinManager.authEnabled.value) {
+            relockRequested.value = true
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Secure until told otherwise, set before any content is drawn so a
+        // protected window is never briefly capturable at launch. The user's
+        // choice is applied just below, once Compose can observe it.
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE
+        )
+        // Exported notes are written to the cache and handed to the share
+        // sheet, which means the plain text of a locked note can outlive the
+        // note itself. Clearing at launch bounds how long that lasts; the
+        // files cannot be deleted right after sharing, since the receiving
+        // app may still be reading them.
+        NoteExporter.purgeCache(this)
         enableEdgeToEdge()
         setContent {
             val context = LocalContext.current
@@ -68,6 +120,23 @@ class MainActivity : FragmentActivity() {
             // Collected here, above JustNotesTheme, so a change in Settings
             // recomputes darkTheme and recolors the whole app immediately.
             val themeMode by settingsManager.themeMode.collectAsState()
+            val biometricForNotes by settingsManager.biometricForNotesEnabled.collectAsState()
+
+            // Screenshots (and the task-switcher thumbnail, which is the part
+            // that leaks without anyone meaning to) are blocked unless the
+            // user has explicitly allowed them — a change that costs a trip
+            // through the lock screen, see ROUTE_REAUTH_FOR_SCREENSHOTS.
+            val screenshotsAllowed by settingsManager.screenshotsAllowed.collectAsState()
+            LaunchedEffect(screenshotsAllowed) {
+                if (screenshotsAllowed) {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                } else {
+                    window.setFlags(
+                        WindowManager.LayoutParams.FLAG_SECURE,
+                        WindowManager.LayoutParams.FLAG_SECURE
+                    )
+                }
+            }
             val useDarkTheme = when (themeMode) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.LIGHT -> false
@@ -81,11 +150,23 @@ class MainActivity : FragmentActivity() {
                 val startDestination = remember {
                     when {
                         !pinManager.hasPin() -> ROUTE_PIN_SETUP
-                        pinManager.isAuthEnabled() -> ROUTE_LOCK
+                        pinManager.authEnabled.value -> ROUTE_LOCK
                         else -> ROUTE_HOME
                     }
                 }
                 val navController = rememberNavController()
+
+                // Pushed on top of whatever was open rather than replacing it:
+                // the editor stays on the back stack with its ViewModel alive,
+                // so unlocking returns to the note exactly as it was, unsaved
+                // changes included. Clearing the stack here would quietly
+                // discard them.
+                LaunchedEffect(relockRequested.value) {
+                    if (relockRequested.value) {
+                        relockRequested.value = false
+                        navController.navigate(ROUTE_RELOCK)
+                    }
+                }
                 // Each screen below manages its own Scaffold (top bar, FAB...)
                 // as needed, rather than one shared Scaffold here for every screen.
                 NavHost(navController = navController, startDestination = startDestination) {
@@ -170,10 +251,45 @@ class MainActivity : FragmentActivity() {
                             viewModel = folderViewModel
                         )
                     }
+                    composable(ROUTE_RELOCK) {
+                        // Same lock screen, but it returns where it came from
+                        // instead of going Home, and cannot be dismissed with
+                        // the back gesture.
+                        LockScreen(
+                            onUnlocked = { navController.popBackStack() },
+                            blockSystemBack = true
+                        )
+                    }
                     composable(ROUTE_SETTINGS) {
                         SettingsScreen(
                             onBack = { navController.popBackStack() },
-                            onChangePin = { navController.navigate(ROUTE_REAUTH_FOR_CHANGE_PIN) }
+                            onChangePin = { navController.navigate(ROUTE_REAUTH_FOR_CHANGE_PIN) },
+                            onDisableAuth = { navController.navigate(ROUTE_REAUTH_FOR_DISABLE_AUTH) },
+                            onAllowScreenshots = { navController.navigate(ROUTE_REAUTH_FOR_SCREENSHOTS) }
+                        )
+                    }
+                    composable(ROUTE_REAUTH_FOR_SCREENSHOTS) {
+                        // Allowing captures is the loosening direction, so it
+                        // is the one that has to be proved. Turning them back
+                        // off tightens and needs nothing.
+                        LockScreen(
+                            onUnlocked = {
+                                settingsManager.setScreenshotsAllowed(true)
+                                navController.popBackStack()
+                            }
+                        )
+                    }
+                    composable(ROUTE_REAUTH_FOR_DISABLE_AUTH) {
+                        // Turning the lock off is as security-sensitive as
+                        // changing the code — arguably more so, since it
+                        // removes the gate entirely. It used to be a single
+                        // tap on a switch, which left the phone's own owner
+                        // as the only thing standing in the way.
+                        LockScreen(
+                            onUnlocked = {
+                                PinManager.forPrimary(context).setAuthEnabled(false)
+                                navController.popBackStack()
+                            }
                         )
                     }
                     composable(ROUTE_REAUTH_FOR_CHANGE_PIN) {
@@ -205,7 +321,11 @@ class MainActivity : FragmentActivity() {
                         // can't be told which note's PinManager.forNote() to use.
                         val notePinSetupViewModel: AuthSetupViewModel = viewModel(
                             factory = SimpleViewModelFactory {
-                                AuthSetupViewModel(application, PinManager.forNote(application, noteId))
+                                AuthSetupViewModel(
+                                    application,
+                                    PinManager.forNote(application, noteId),
+                                    noteId
+                                )
                             }
                         )
                         PinSetupScreen(
@@ -223,7 +343,11 @@ class MainActivity : FragmentActivity() {
                         val application = context.applicationContext as Application
                         val secondaryUnlockViewModel: AuthUnlockViewModel = viewModel(
                             factory = SimpleViewModelFactory {
-                                AuthUnlockViewModel(application, PinManager.forNote(application, noteId))
+                                AuthUnlockViewModel(
+                                    application,
+                                    PinManager.forNote(application, noteId),
+                                    noteId
+                                )
                             }
                         )
                         LockScreen(
@@ -233,6 +357,10 @@ class MainActivity : FragmentActivity() {
                                 }
                             },
                             titleRes = R.string.secondary_lock_title,
+                            // A fingerprint cannot derive this note's key, but
+                            // it can unwrap a stored copy of it — provided the
+                            // user left that shortcut switched on.
+                            allowBiometrics = biometricForNotes,
                             viewModel = secondaryUnlockViewModel
                         )
                     }

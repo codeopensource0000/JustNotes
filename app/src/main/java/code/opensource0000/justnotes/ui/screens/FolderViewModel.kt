@@ -9,8 +9,7 @@ import androidx.lifecycle.viewModelScope
 import code.opensource0000.justnotes.data.local.FolderEntity
 import code.opensource0000.justnotes.data.local.JustNotesDatabase
 import code.opensource0000.justnotes.data.local.NoteEntity
-import code.opensource0000.justnotes.security.NoteEncryption
-import code.opensource0000.justnotes.security.PinManager
+import code.opensource0000.justnotes.security.NoteSecrets
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -46,17 +45,21 @@ class FolderViewModel(application: Application, private val folderId: Long) : An
     var folderName by mutableStateOf("")
         private set
 
+    var folderIsDefault by mutableStateOf(false)
+        private set
+
     init {
         viewModelScope.launch {
-            folderName = database.folderDao().getById(folderId)?.name ?: ""
+            val folder = database.folderDao().getById(folderId)
+            folderName = folder?.name ?: ""
+            folderIsDefault = folder?.isDefault == true
         }
     }
 
     fun deleteNote(note: NoteEntity) {
         viewModelScope.launch {
             if (note.isLocked) {
-                PinManager.forNote(getApplication(), note.id).clearPin()
-                NoteEncryption.deleteKey(note.id)
+                NoteSecrets.forget(getApplication(), note.id)
             }
             database.noteDao().deleteById(note.id)
         }

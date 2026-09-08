@@ -1,11 +1,9 @@
 package code.opensource0000.justnotes.ui.screens
 
 import android.app.Application
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import code.opensource0000.justnotes.security.BiometricShortcut
 import code.opensource0000.justnotes.security.PinManager
 import code.opensource0000.justnotes.settings.AppLanguage
 import code.opensource0000.justnotes.settings.SettingsManager
@@ -60,13 +58,37 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         settingsManager.setAutosaveEnabled(enabled)
     }
 
-    // Read once into local state rather than observed as a Flow: nothing
-    // else in the app changes this value concurrently while Settings is open.
-    var authEnabled by mutableStateOf(pinManager.isAuthEnabled())
-        private set
+    val biometricForNotesEnabled: StateFlow<Boolean> = settingsManager.biometricForNotesEnabled
 
-    fun onAuthEnabledChange(enabled: Boolean) {
-        authEnabled = enabled
-        pinManager.setAuthEnabled(enabled)
+    // Switching this off erases every stored shortcut immediately rather than
+    // just hiding the prompt: a wrapped copy of a note's key left lying around
+    // after the user asked for it to stop existing would be the wrong default.
+    // Nothing is lost — the code still opens every note.
+    fun setBiometricForNotesEnabled(enabled: Boolean) {
+        settingsManager.setBiometricForNotesEnabled(enabled)
+        if (!enabled) {
+            viewModelScope.launch(Dispatchers.IO) {
+                BiometricShortcut.deleteAll(getApplication())
+            }
+        }
+    }
+
+    // Observed rather than read once: turning the lock off now happens on a
+    // separate re-authentication screen, so the value can change while this
+    // one is still on the back stack.
+    val authEnabled: StateFlow<Boolean> = pinManager.authEnabled
+
+    // Only switching it on. Switching it off is routed through the lock screen
+    // first — see SettingsScreen and MainActivity's reauth route.
+    fun enableAuth() {
+        pinManager.setAuthEnabled(true)
+    }
+
+    val screenshotsAllowed: StateFlow<Boolean> = settingsManager.screenshotsAllowed
+
+    // Only the re-protecting direction. Allowing captures goes through the
+    // lock screen, in MainActivity.
+    fun blockScreenshots() {
+        settingsManager.setScreenshotsAllowed(false)
     }
 }

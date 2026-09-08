@@ -1,12 +1,18 @@
 package code.opensource0000.justnotes.ui.screens
 
 import android.app.Application
+import androidx.biometric.BiometricManager
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import code.opensource0000.justnotes.security.BiometricShortcut
+import code.opensource0000.justnotes.security.NoteKeySession
 import code.opensource0000.justnotes.security.PinManager
+import code.opensource0000.justnotes.settings.SettingsManager
+import javax.crypto.Cipher
+import javax.crypto.SecretKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -15,11 +21,16 @@ class AuthSetupViewModel @JvmOverloads constructor(
     application: Application,
     // Defaults to the primary PIN so every existing call site (first-run
     // setup, "change code" in Settings) keeps working unchanged; the
-    // secondary-lock setup screen supplies PinManager.forSecondary() instead.
+    // secondary-lock setup screen supplies PinManager.forNote() instead.
     // @JvmOverloads is required for the default viewModel() factory to still
     // find a lone-Application constructor via reflection — see the identical
     // note in AuthUnlockViewModel.
-    private val pinManager: PinManager = PinManager.forPrimary(application)
+    private val pinManager: PinManager = PinManager.forPrimary(application),
+    // Null for the primary lock. For a note, the code chosen here is what its
+    // content key comes from, and the editor is sitting behind this screen
+    // waiting to encrypt what is already on screen — so the key is derived and
+    // handed over as soon as the code is confirmed. See AuthUnlockViewModel.
+    private val noteId: Long? = null
 ) : AndroidViewModel(application) {
 
     enum class Stage { ENTER_NEW, CONFIRM }
@@ -33,6 +44,16 @@ class AuthSetupViewModel @JvmOverloads constructor(
 
     // Kept only in memory for the few seconds between the two steps, never persisted.
     private var firstEntry = ""
+
+    // One-shot: non-null when the screen must show a fingerprint prompt bound
+    // to this cipher, to enrol the note's shortcut. A symmetric Keystore key
+    // needs authentication to *write* as well as to read, which is why setting
+    // the shortcut up asks for a fingerprint once per note.
+    var enrolmentCipher by mutableStateOf<Cipher?>(null)
+        private set
+
+    private var pendingContentKey: SecretKey? = null
+    private var pendingComplete: (() -> Unit)? = null
 
     fun onDigit(digit: Int, onComplete: () -> Unit) {
         if (pin.length >= PinManager.PIN_LENGTH) return
@@ -50,11 +71,33 @@ class AuthSetupViewModel @JvmOverloads constructor(
                 if (pin == firstEntry) {
                     val finalPin = pin
                     viewModelScope.launch {
-                        // PBKDF2 hashing is deliberately slow; keep it off the main thread.
-                        withContext(Dispatchers.Default) {
+                        // PBKDF2 hashing is deliberately slow; keep it off the
+                        // main thread. setPin() returns the content key from
+                        // the same derivation that produced the stored hash,
+                        // so choosing a code costs one pass, not two.
+                        val contentKey = withContext(Dispatchers.Default) {
                             pinManager.setPin(finalPin)
                         }
-                        onComplete()
+                        if (noteId == null) {
+                            onComplete()
+                            return@launch
+                        }
+                        NoteKeySession.put(noteId, contentKey)
+
+                        val cipher = if (canOfferBiometrics()) {
+                            BiometricShortcut.enrolmentCipher(noteId)
+                        } else {
+                            null
+                        }
+                        if (cipher == null) {
+                            onComplete()
+                            return@launch
+                        }
+                        // Only the screen can put a prompt on the display, so
+                        // completion waits until it reports back.
+                        pendingContentKey = contentKey
+                        pendingComplete = onComplete
+                        enrolmentCipher = cipher
                     }
                 } else {
                     mismatchError = true
@@ -64,6 +107,31 @@ class AuthSetupViewModel @JvmOverloads constructor(
                 }
             }
         }
+    }
+
+    // Called whether the prompt succeeded (an authenticated cipher) or was
+    // cancelled or failed (null). Setup is over either way: a note whose
+    // shortcut was declined is perfectly usable, it just always asks for its
+    // code. Declining is not an error and must not block the flow.
+    fun onEnrolmentFinished(authenticatedCipher: Cipher?) {
+        val id = noteId
+        val contentKey = pendingContentKey
+        val complete = pendingComplete
+        enrolmentCipher = null
+        pendingContentKey = null
+        pendingComplete = null
+        if (authenticatedCipher != null && id != null && contentKey != null) {
+            BiometricShortcut.store(getApplication(), id, authenticatedCipher, contentKey)
+        }
+        complete?.invoke()
+    }
+
+    private fun canOfferBiometrics(): Boolean {
+        val settings = SettingsManager.getInstance(getApplication())
+        if (!settings.biometricForNotesEnabled.value) return false
+        return BiometricManager.from(getApplication())
+            .canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) ==
+            BiometricManager.BIOMETRIC_SUCCESS
     }
 
     fun onDelete() {

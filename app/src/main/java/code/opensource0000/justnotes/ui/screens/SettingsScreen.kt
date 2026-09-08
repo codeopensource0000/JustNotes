@@ -48,10 +48,19 @@ import code.opensource0000.justnotes.ui.components.RadioRow
 fun SettingsScreen(
     onBack: () -> Unit,
     onChangePin: () -> Unit,
+    // Turning the app lock off is gated by the lock screen, which lives in the
+    // navigation graph — so the decision to route there belongs to the caller.
+    onDisableAuth: () -> Unit,
+    // Same reasoning as onDisableAuth: allowing screenshots loosens a
+    // protection, so it goes through the lock screen first.
+    onAllowScreenshots: () -> Unit,
     viewModel: SettingsViewModel = viewModel()
 ) {
+    val authEnabled by viewModel.authEnabled.collectAsState()
+    val screenshotsAllowed by viewModel.screenshotsAllowed.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
     val autosaveEnabled by viewModel.autosaveEnabled.collectAsState()
+    val biometricForNotes by viewModel.biometricForNotesEnabled.collectAsState()
     val dictationLanguage by viewModel.dictationLanguage.collectAsState()
     val appLanguage by viewModel.appLanguage.collectAsState()
     val activity = LocalContext.current as? FragmentActivity
@@ -144,7 +153,58 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Switch(checked = viewModel.authEnabled, onCheckedChange = viewModel::onAuthEnabledChange)
+                Switch(
+                    checked = authEnabled,
+                    onCheckedChange = { enabled ->
+                        if (enabled) viewModel.enableAuth() else onDisableAuth()
+                    }
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.settings_biometric_notes),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_biometric_notes_sub),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = biometricForNotes,
+                    onCheckedChange = viewModel::setBiometricForNotesEnabled
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.settings_screenshots),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_screenshots_sub),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = screenshotsAllowed,
+                    onCheckedChange = { allowed ->
+                        if (allowed) onAllowScreenshots() else viewModel.blockScreenshots()
+                    }
+                )
             }
             NavigationRow(text = stringResource(R.string.settings_change_pin), onClick = onChangePin)
 
@@ -264,7 +324,7 @@ private fun voskModelStateLabel(state: VoskModelState): String = when (state) {
 }
 
 @Composable
-private fun NavigationRow(text: String, onClick: () -> Unit, subText: String? = null) {
+private fun NavigationRow(text: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -272,16 +332,7 @@ private fun NavigationRow(text: String, onClick: () -> Unit, subText: String? = 
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = text, style = MaterialTheme.typography.bodyMedium)
-            if (subText != null) {
-                Text(
-                    text = subText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+        Text(text = text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         Icon(
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,

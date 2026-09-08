@@ -77,7 +77,7 @@ import code.opensource0000.justnotes.ui.components.DeleteConfirmDialog
 import code.opensource0000.justnotes.ui.components.MarkdownVisualTransformation
 import code.opensource0000.justnotes.ui.components.NewFolderDialog
 import code.opensource0000.justnotes.ui.components.RadioRow
-import code.opensource0000.justnotes.ui.components.showSystemAuthPrompt
+import code.opensource0000.justnotes.ui.components.folderLabel
 import code.opensource0000.justnotes.ui.theme.NoteTitleStyle
 import kotlinx.coroutines.launch
 
@@ -124,20 +124,33 @@ fun NoteEditorScreen(
         }
     }
 
-    // Fires whenever the ViewModel flips needsSystemAuth to true (Keystore
-    // refused because there's no recent-enough system authentication) — most
-    // often after unlocking the secondary lock via its code fallback rather
-    // than biometrics, since only a real biometric/device-credential check
-    // satisfies the Keystore, never our own app-level PIN check.
+    // Only needed to hand the share sheet a real Activity when exporting.
     val activity = LocalContext.current as? FragmentActivity
-    LaunchedEffect(viewModel.needsSystemAuth) {
-        if (viewModel.needsSystemAuth && activity != null) {
-            showSystemAuthPrompt(
-                activity,
-                titleRes = R.string.editor_confirm_identity,
-                onSuccess = viewModel::onSystemAuthSucceeded
-            )
-        }
+
+    // The stored bytes of a locked note could not be turned back into text.
+    // Nothing here can fix that, so the dialog's job is to say so plainly and
+    // offer the only two useful moves — leave the note untouched, or delete
+    // it. It is not dismissible: tapping outside would drop the user into an
+    // empty-looking editor with no idea the real content is still down there.
+    if (viewModel.contentUnreadable) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(stringResource(R.string.editor_content_unreadable_title)) },
+            text = { Text(stringResource(R.string.editor_content_unreadable_message)) },
+            confirmButton = {
+                TextButton(onClick = onBack) {
+                    Text(stringResource(R.string.editor_back))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.deleteNote(onFinished = onBack) }) {
+                    Text(
+                        stringResource(R.string.action_delete),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        )
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -272,10 +285,10 @@ fun NoteEditorScreen(
                 Column {
                     folders.forEach { folder ->
                         RadioRow(
-                            text = folder.name,
+                            text = folderLabel(folder.name, folder.isDefault),
                             selected = folder.id == viewModel.folderId,
                             onClick = {
-                                viewModel.selectFolder(folder.id, folder.name)
+                                viewModel.selectFolder(folder)
                                 showFolderPicker = false
                             }
                         )
@@ -381,7 +394,10 @@ fun NoteEditorScreen(
             TextButton(onClick = { showFolderPicker = true }, modifier = Modifier.padding(start = 4.dp)) {
                 Icon(Icons.Filled.Folder, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(viewModel.folderName, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = folderLabel(viewModel.folderName, viewModel.folderIsDefault),
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
 
             // Inserts Markdown markers into the plain-text content at the

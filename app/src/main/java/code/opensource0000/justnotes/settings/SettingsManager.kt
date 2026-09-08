@@ -1,6 +1,7 @@
 package code.opensource0000.justnotes.settings
 
 import android.content.Context
+import androidx.core.content.edit
 import code.opensource0000.justnotes.stt.DictationLanguage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +20,7 @@ class SettingsManager private constructor(context: Context) {
     val themeMode: StateFlow<ThemeMode> = _themeMode
 
     fun setThemeMode(mode: ThemeMode) {
-        prefs.edit().putString(KEY_THEME_MODE, mode.name).apply()
+        prefs.edit { putString(KEY_THEME_MODE, mode.name) }
         _themeMode.value = mode
     }
 
@@ -34,8 +35,38 @@ class SettingsManager private constructor(context: Context) {
     val autosaveEnabled: StateFlow<Boolean> = _autosaveEnabled
 
     fun setAutosaveEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_AUTOSAVE_ENABLED, enabled).apply()
+        prefs.edit { putBoolean(KEY_AUTOSAVE_ENABLED, enabled) }
         _autosaveEnabled.value = enabled
+    }
+
+    // Off by default, which means FLAG_SECURE is on and the app is blank in
+    // screenshots, screen recordings and the task switcher thumbnail.
+    //
+    // A toggle rather than a prompt because Android offers no hook on the
+    // screenshot gesture itself — an app cannot ask "prove it's you" for one
+    // capture and then allow it. FLAG_SECURE is all-or-nothing at any given
+    // moment, so the authentication is attached to flipping this instead:
+    // turning it on goes through the lock screen, turning it back off is free.
+    private val _screenshotsAllowed =
+        MutableStateFlow(prefs.getBoolean(KEY_SCREENSHOTS_ALLOWED, false))
+    val screenshotsAllowed: StateFlow<Boolean> = _screenshotsAllowed
+
+    fun setScreenshotsAllowed(allowed: Boolean) {
+        prefs.edit { putBoolean(KEY_SCREENSHOTS_ALLOWED, allowed) }
+        _screenshotsAllowed.value = allowed
+    }
+
+    // On by default: the fingerprint shortcut is a convenience, and the code
+    // remains the only thing a locked note's content key is derived from
+    // either way. Turning it off is a deliberate tightening — see
+    // BiometricShortcut for what the shortcut does and does not protect.
+    private val _biometricForNotesEnabled =
+        MutableStateFlow(prefs.getBoolean(KEY_BIOMETRIC_FOR_NOTES, true))
+    val biometricForNotesEnabled: StateFlow<Boolean> = _biometricForNotesEnabled
+
+    fun setBiometricForNotesEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_BIOMETRIC_FOR_NOTES, enabled) }
+        _biometricForNotesEnabled.value = enabled
     }
 
     // Defaults to French, matching the app's own primary language; the model
@@ -44,7 +75,7 @@ class SettingsManager private constructor(context: Context) {
     val dictationLanguage: StateFlow<DictationLanguage> = _dictationLanguage
 
     fun setDictationLanguage(language: DictationLanguage) {
-        prefs.edit().putString(KEY_DICTATION_LANGUAGE, language.name).apply()
+        prefs.edit { putString(KEY_DICTATION_LANGUAGE, language.name) }
         _dictationLanguage.value = language
     }
 
@@ -61,7 +92,7 @@ class SettingsManager private constructor(context: Context) {
     val appLanguage: StateFlow<AppLanguage> = _appLanguage
 
     fun setAppLanguage(language: AppLanguage) {
-        prefs.edit().putString(KEY_APP_LANGUAGE, language.name).apply()
+        prefs.edit { putString(KEY_APP_LANGUAGE, language.name) }
         _appLanguage.value = language
     }
 
@@ -74,6 +105,8 @@ class SettingsManager private constructor(context: Context) {
         private const val PREFS_NAME = "justnotes_settings"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_AUTOSAVE_ENABLED = "autosave_enabled"
+        private const val KEY_BIOMETRIC_FOR_NOTES = "biometric_for_notes"
+        private const val KEY_SCREENSHOTS_ALLOWED = "screenshots_allowed"
         private const val KEY_DICTATION_LANGUAGE = "dictation_language"
         private const val KEY_APP_LANGUAGE = "app_language"
 

@@ -7,8 +7,7 @@ import code.opensource0000.justnotes.data.local.FolderEntity
 import code.opensource0000.justnotes.data.local.FolderWithNoteCount
 import code.opensource0000.justnotes.data.local.JustNotesDatabase
 import code.opensource0000.justnotes.data.local.NoteEntity
-import code.opensource0000.justnotes.security.NoteEncryption
-import code.opensource0000.justnotes.security.PinManager
+import code.opensource0000.justnotes.security.NoteSecrets
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -75,8 +74,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteNote(note: NoteEntity) {
         viewModelScope.launch {
             if (note.isLocked) {
-                PinManager.forNote(getApplication(), note.id).clearPin()
-                NoteEncryption.deleteKey(note.id)
+                NoteSecrets.forget(getApplication(), note.id)
             }
             database.noteDao().deleteById(note.id)
         }
@@ -94,14 +92,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteFolder(folder: FolderWithNoteCount) {
         viewModelScope.launch {
             // The DB cascade removes the notes themselves, but not their
-            // PIN/Keystore key — those live outside Room and need clearing
-            // explicitly for any note in this folder that was locked.
+            // codes — those live outside Room, in their own preferences file,
+            // and need clearing explicitly for any note here that was locked.
             database.noteDao().getByFolder(folder.id)
                 .filter { it.isLocked }
-                .forEach { note ->
-                    PinManager.forNote(getApplication(), note.id).clearPin()
-                    NoteEncryption.deleteKey(note.id)
-                }
+                .forEach { note -> NoteSecrets.forget(getApplication(), note.id) }
             database.folderDao().deleteById(folder.id)
         }
     }

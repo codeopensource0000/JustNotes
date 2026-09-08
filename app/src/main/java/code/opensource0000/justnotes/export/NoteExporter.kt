@@ -24,8 +24,22 @@ enum class ExportFormat(val extension: String, val mimeType: String) {
 // app in a form other tools can read.
 object NoteExporter {
 
+    // Every export leaves a readable copy behind in the cache, and for a note
+    // protected by the secondary lock that copy is its decrypted text — which
+    // used to survive the note being locked again, or deleted outright, for as
+    // long as the app stayed installed.
+    //
+    // Deleting right after sharing is not an option: the receiving app is
+    // handed a content:// URI it may not have finished reading. Clearing at
+    // launch instead bounds the exposure to a single session, which is the
+    // best that can be done without breaking the share itself.
+    fun purgeCache(context: Context) {
+        val exportDir = File(context.cacheDir, EXPORT_DIR_NAME)
+        if (exportDir.exists()) exportDir.deleteRecursively()
+    }
+
     fun export(context: Context, title: String, content: String, format: ExportFormat) {
-        val exportDir = File(context.cacheDir, "exports").apply { mkdirs() }
+        val exportDir = File(context.cacheDir, EXPORT_DIR_NAME).apply { mkdirs() }
         val file = File(exportDir, fileNameFor(title, format))
         file.writeText(renderContent(title, content, format))
 
@@ -53,7 +67,11 @@ object NoteExporter {
             }
         }
 
-    private fun fileNameFor(title: String, format: ExportFormat): String {
+    private const val EXPORT_DIR_NAME = "exports"
+
+    // internal so the sanitising below can be tested directly: it is what
+    // stops a note title from steering the export out of the cache directory.
+    internal fun fileNameFor(title: String, format: ExportFormat): String {
         val base = title.trim()
             .ifBlank { "note" }
             .replace(Regex("[^\\p{L}\\p{N} _-]"), "_")
