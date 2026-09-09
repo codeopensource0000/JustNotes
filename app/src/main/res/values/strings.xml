@@ -105,7 +105,7 @@
 
     <string name="settings_section_about">À propos</string>
     <string name="about_title">À propos</string>
-    <string name="about_app_licence">JustNotes est distribué sous licence Apache 2.0. Les textes ci-dessous sont inclus dans l\'application elle-même.</string>
+    <string name="about_app_licence">JustNotes est un logiciel libre, publié sous licence Apache 2.0 — comme les modèles de reconnaissance vocale Vosk qu\'il embarque.</string>
     <string name="about_third_party">Composants tiers</string>
     <string name="about_full_licence">Licence Apache 2.0</string>
 

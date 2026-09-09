@@ -9,8 +9,9 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import code.opensource0000.justnotes.data.NotesRepository
+import code.opensource0000.justnotes.data.RoomNotesRepository
 import code.opensource0000.justnotes.data.local.FolderEntity
-import code.opensource0000.justnotes.data.local.JustNotesDatabase
 import code.opensource0000.justnotes.data.local.NoteEntity
 import code.opensource0000.justnotes.security.NoteEncryption
 import code.opensource0000.justnotes.security.NoteKeySession
@@ -28,9 +29,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.security.GeneralSecurityException
 
-class NoteEditorViewModel(private val application: Application) : AndroidViewModel(application) {
+class NoteEditorViewModel @JvmOverloads constructor(
+    private val application: Application,
+    // Defaulted so the reflection-based viewModel() factory keeps working, and
+    // overridable so a test can hand in a fake instead of a real database.
+    private val repository: NotesRepository = RoomNotesRepository.get(application)
+) : AndroidViewModel(application) {
 
-    private val database = JustNotesDatabase.getInstance(application)
     private val settingsManager = SettingsManager.getInstance(application)
     private val voskModelManager = VoskModelManager.getInstance(application)
     private val dictationManager = VoiceDictationManager.getInstance(application)
@@ -74,8 +79,7 @@ class NoteEditorViewModel(private val application: Application) : AndroidViewMod
 
     // All folders, for the picker dialog — plain list (no note counts, unlike
     // HomeScreen's Folders tab), since that number would just be noise here.
-    val folders: StateFlow<List<FolderEntity>> = database.folderDao()
-        .observeAll()
+    val folders: StateFlow<List<FolderEntity>> = repository.observeFolders()
         .stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = emptyList())
 
     fun selectFolder(folder: FolderEntity) {
@@ -87,7 +91,7 @@ class NoteEditorViewModel(private val application: Application) : AndroidViewMod
     fun createFolderAndSelect(name: String) {
         if (name.isBlank()) return
         viewModelScope.launch {
-            val newId = database.folderDao().insert(FolderEntity(name = name))
+            val newId = repository.createFolder(name)
             folderId = newId
             folderName = name
             // A folder the user just created is never the catch-all one.
@@ -105,8 +109,8 @@ class NoteEditorViewModel(private val application: Application) : AndroidViewMod
         if (noteId > 0 || newNoteFolderResolved) return
         newNoteFolderResolved = true
         viewModelScope.launch {
-            val folder = (if (overrideFolderId > 0) database.folderDao().getById(overrideFolderId) else null)
-                ?: database.folderDao().getDefaultFolder()
+            val folder = (if (overrideFolderId > 0) repository.folder(overrideFolderId) else null)
+                ?: repository.defaultFolder()
                 ?: return@launch
             folderId = folder.id
             folderName = folder.name
@@ -378,13 +382,13 @@ class NoteEditorViewModel(private val application: Application) : AndroidViewMod
 
     private fun performLoad(noteId: Long) {
         viewModelScope.launch {
-            val note = database.noteDao().getById(noteId) ?: return@launch
+            val note = repository.note(noteId) ?: return@launch
             editingNoteId = note.id
             editingCreatedAt = note.createdAt
             isLocked = note.isLocked
             title = note.title
             folderId = note.folderId
-            val folder = database.folderDao().getById(note.folderId)
+            val folder = repository.folder(note.folderId)
             folderName = folder?.name ?: ""
             folderIsDefault = folder?.isDefault == true
             if (!note.isLocked) {
@@ -468,7 +472,7 @@ class NoteEditorViewModel(private val application: Application) : AndroidViewMod
         if (currentId == null) {
             // folderId is already resolved by initializeNewNoteFolderIfNeeded()
             // (the default folder, unless the user picked a different one).
-            val insertedId = database.noteDao().insert(
+            val insertedId = repository.insertNote(
                 NoteEntity(
                     folderId = folderId,
                     title = title,
@@ -483,7 +487,7 @@ class NoteEditorViewModel(private val application: Application) : AndroidViewMod
             editingNoteId = insertedId
             editingCreatedAt = now
         } else {
-            database.noteDao().update(
+            repository.updateNote(
                 NoteEntity(
                     id = currentId,
                     folderId = folderId,
@@ -507,12 +511,19 @@ class NoteEditorViewModel(private val application: Application) : AndroidViewMod
             return
         }
         viewModelScope.launch {
-            if (isLocked) {
-                withContext(Dispatchers.Default) {
-                    NoteSecrets.forget(application, id)
-                }
-            }
-            database.noteDao().deleteById(id)
+            // The repository owns the rule that a locked note's code, shortcut
+            // and key go with its row.
+            repository.deleteNote(
+                NoteEntity(
+                    id = id,
+                    folderId = folderId,
+                    title = title,
+                    content = "",
+                    isLocked = isLocked,
+                    createdAt = editingCreatedAt,
+                    updatedAt = editingCreatedAt
+                )
+            )
             onFinished()
         }
     }
