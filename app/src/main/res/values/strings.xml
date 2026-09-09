@@ -103,6 +103,12 @@
     <string name="settings_autosave_sub">Enregistre en quittant une note, sans demander de confirmation</string>
     <string name="secondary_lock_title">Cadenas secondaire</string>
 
+    <string name="settings_section_about">À propos</string>
+    <string name="about_title">À propos</string>
+    <string name="about_app_licence">JustNotes est distribué sous licence Apache 2.0. Les textes ci-dessous sont inclus dans l\'application elle-même.</string>
+    <string name="about_third_party">Composants tiers</string>
+    <string name="about_full_licence">Licence Apache 2.0</string>
+
     <string name="settings_section_stt">Dictée vocale</string>
     <string name="settings_stt_description">Reconnaissance vocale entièrement locale. Les modèles sont inclus dans l\'application, rien n\'est téléchargé (environ 40 Mo chacun, une fois installés)</string>
     <string name="settings_stt_language">Langue de dictée</string>

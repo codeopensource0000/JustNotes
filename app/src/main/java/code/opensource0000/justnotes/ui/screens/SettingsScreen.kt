@@ -54,6 +54,7 @@ fun SettingsScreen(
     // Same reasoning as onDisableAuth: allowing screenshots loosens a
     // protection, so it goes through the lock screen first.
     onAllowScreenshots: () -> Unit,
+    onOpenAbout: () -> Unit,
     viewModel: SettingsViewModel = viewModel()
 ) {
     val authEnabled by viewModel.authEnabled.collectAsState()
@@ -231,6 +232,9 @@ fun SettingsScreen(
                     VoskLanguageRow(language = language, viewModel = viewModel)
                 }
             }
+
+            SectionLabel(text = stringResource(R.string.settings_section_about))
+            NavigationRow(text = stringResource(R.string.about_title), onClick = onOpenAbout)
         }
     }
 

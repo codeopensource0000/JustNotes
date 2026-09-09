@@ -97,6 +97,44 @@ android {
     }
 }
 
+// The licence texts have to ship inside the APK, not just sit in the
+// repository: Apache 2.0 asks that recipients of the *work* get a copy of the
+// licence and the NOTICE, and someone installing the APK never sees this repo.
+//
+// Copied at build time rather than duplicated into src/main/assets, so there
+// is one source of truth. Two files that must say the same thing, maintained
+// by hand, eventually stop saying the same thing.
+// Registered through the Variant API rather than sourceSets.assets.srcDir():
+// AGP rejects a Provider there, because it cannot tell generated files from
+// hand-written ones, and wiring it that way would silently lose the task
+// dependency anyway.
+abstract class CopyLicenceAssets : DefaultTask() {
+    @get:InputFiles
+    abstract val sourceFiles: ConfigurableFileCollection
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun copyThem() {
+        val target = outputDirectory.get().asFile
+        target.mkdirs()
+        sourceFiles.forEach { it.copyTo(target.resolve(it.name), overwrite = true) }
+    }
+}
+
+androidComponents.onVariants { variant ->
+    val copyTask = tasks.register<CopyLicenceAssets>(
+        "copy${variant.name.replaceFirstChar { it.uppercase() }}LicenceAssets"
+    ) {
+        sourceFiles.from(rootProject.file("LICENSE"), rootProject.file("NOTICE"))
+    }
+    variant.sources.assets?.addGeneratedSourceDirectory(
+        copyTask,
+        CopyLicenceAssets::outputDirectory
+    )
+}
+
 // Where Room writes the exported schema (see JustNotesDatabase.exportSchema).
 // These JSON files are committed on purpose: they are the baseline for every
 // future migration.

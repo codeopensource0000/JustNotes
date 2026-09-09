@@ -28,6 +28,7 @@ import code.opensource0000.justnotes.settings.LocaleContextWrapper
 import code.opensource0000.justnotes.settings.SettingsManager
 import code.opensource0000.justnotes.settings.ThemeMode
 import code.opensource0000.justnotes.ui.SimpleViewModelFactory
+import code.opensource0000.justnotes.ui.screens.AboutScreen
 import code.opensource0000.justnotes.ui.screens.AuthSetupViewModel
 import code.opensource0000.justnotes.ui.screens.AuthUnlockViewModel
 import code.opensource0000.justnotes.ui.screens.FolderScreen
@@ -54,6 +55,7 @@ private const val ROUTE_REAUTH_FOR_CHANGE_PIN = "reauth_change_pin"
 private const val ROUTE_REAUTH_FOR_DISABLE_AUTH = "reauth_disable_auth"
 private const val ROUTE_REAUTH_FOR_SCREENSHOTS = "reauth_screenshots"
 private const val ROUTE_RELOCK = "relock"
+private const val ROUTE_ABOUT = "about"
 
 // How long the app may sit in the background before the lock screen comes
 // back. Long enough to glance at a notification or paste something in from
@@ -280,8 +282,12 @@ class MainActivity : FragmentActivity() {
                             onBack = { navController.popBackStack() },
                             onChangePin = { navController.navigate(ROUTE_REAUTH_FOR_CHANGE_PIN) },
                             onDisableAuth = { navController.navigate(ROUTE_REAUTH_FOR_DISABLE_AUTH) },
-                            onAllowScreenshots = { navController.navigate(ROUTE_REAUTH_FOR_SCREENSHOTS) }
+                            onAllowScreenshots = { navController.navigate(ROUTE_REAUTH_FOR_SCREENSHOTS) },
+                            onOpenAbout = { navController.navigate(ROUTE_ABOUT) }
                         )
+                    }
+                    composable(ROUTE_ABOUT) {
+                        AboutScreen(onBack = { navController.popBackStack() })
                     }
                     composable(ROUTE_REAUTH_FOR_SCREENSHOTS) {
                         // Allowing captures is the loosening direction, so it

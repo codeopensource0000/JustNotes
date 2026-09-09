@@ -103,6 +103,12 @@
     <string name="settings_autosave_sub">Saves automatically when leaving a note, no confirmation needed</string>
     <string name="secondary_lock_title">Secondary lock</string>
 
+    <string name="settings_section_about">About</string>
+    <string name="about_title">About</string>
+    <string name="about_app_licence">JustNotes is distributed under the Apache License 2.0. The texts below are bundled inside the app itself.</string>
+    <string name="about_third_party">Third-party components</string>
+    <string name="about_full_licence">Apache License 2.0</string>
+
     <string name="settings_section_stt">Voice dictation</string>
     <string name="settings_stt_description">Fully on-device speech recognition. The models ship inside the app, nothing is downloaded (about 40 MB each, once installed)</string>
     <string name="settings_stt_language">Dictation language</string>
