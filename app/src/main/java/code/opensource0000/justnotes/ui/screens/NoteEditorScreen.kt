@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -367,6 +368,19 @@ fun NoteEditorScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                // The keyboard's own inset. Scaffold reserves room for the
+                // system bars but not for the IME, and since the app draws
+                // edge-to-edge the manifest's adjustResize no longer shrinks
+                // the window either — Android 15 leaves that to the app. So
+                // without this the keyboard simply covered the lower half of
+                // the note, caret included.
+                //
+                // Applied to the whole column rather than to the text area, so
+                // the toolbar stays put and only the writing area gives up the
+                // height. BoxWithConstraints below then measures the reduced
+                // space, and the caret keeps itself in view against what is
+                // actually visible.
+                .imePadding()
         ) {
             Row(
                 modifier = Modifier
