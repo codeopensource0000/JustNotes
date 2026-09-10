@@ -8,6 +8,7 @@ import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -66,6 +67,29 @@ private const val ROUTE_CHANGE_PIN = "change_pin"
 private const val ROUTE_SECONDARY_LOCK = "secondary_lock/{noteId}"
 private const val ROUTE_NOTE_PIN_SETUP = "note_pin_setup/{noteId}"
 private const val ROUTE_FOLDER = "folder/{folderId}"
+
+// The primary code, spelled out. These exist so that no screen can fall back
+// to it by accident: AuthUnlockViewModel and AuthSetupViewModel have no
+// default PinManager any more, so every route has to say which code it means.
+@Composable
+private fun primaryUnlockViewModel(): AuthUnlockViewModel {
+    val application = LocalContext.current.applicationContext as Application
+    return viewModel(
+        factory = SimpleViewModelFactory {
+            AuthUnlockViewModel(application, PinManager.forPrimary(application), noteId = null)
+        }
+    )
+}
+
+@Composable
+private fun primarySetupViewModel(): AuthSetupViewModel {
+    val application = LocalContext.current.applicationContext as Application
+    return viewModel(
+        factory = SimpleViewModelFactory {
+            AuthSetupViewModel(application, PinManager.forPrimary(application), noteId = null)
+        }
+    )
+}
 
 class MainActivity : FragmentActivity() {
 
@@ -193,7 +217,8 @@ class MainActivity : FragmentActivity() {
                                 navController.navigate(ROUTE_HOME) {
                                     popUpTo(ROUTE_PIN_SETUP) { inclusive = true }
                                 }
-                            }
+                            },
+                            viewModel = primarySetupViewModel()
                         )
                     }
                     composable(ROUTE_LOCK) {
@@ -202,7 +227,8 @@ class MainActivity : FragmentActivity() {
                                 navController.navigate(ROUTE_HOME) {
                                     popUpTo(ROUTE_LOCK) { inclusive = true }
                                 }
-                            }
+                            },
+                            viewModel = primaryUnlockViewModel()
                         )
                     }
                     composable(ROUTE_HOME) {
@@ -274,7 +300,8 @@ class MainActivity : FragmentActivity() {
                         // the back gesture.
                         LockScreen(
                             onUnlocked = { navController.popBackStack() },
-                            blockSystemBack = true
+                            blockSystemBack = true,
+                            viewModel = primaryUnlockViewModel()
                         )
                     }
                     composable(ROUTE_SETTINGS) {
@@ -297,7 +324,8 @@ class MainActivity : FragmentActivity() {
                             onUnlocked = {
                                 settingsManager.setScreenshotsAllowed(true)
                                 navController.popBackStack()
-                            }
+                            },
+                            viewModel = primaryUnlockViewModel()
                         )
                     }
                     composable(ROUTE_REAUTH_FOR_DISABLE_AUTH) {
@@ -310,7 +338,8 @@ class MainActivity : FragmentActivity() {
                             onUnlocked = {
                                 PinManager.forPrimary(context).setAuthEnabled(false)
                                 navController.popBackStack()
-                            }
+                            },
+                            viewModel = primaryUnlockViewModel()
                         )
                     }
                     composable(ROUTE_REAUTH_FOR_CHANGE_PIN) {
@@ -324,13 +353,17 @@ class MainActivity : FragmentActivity() {
                                 navController.navigate(ROUTE_CHANGE_PIN) {
                                     popUpTo(ROUTE_REAUTH_FOR_CHANGE_PIN) { inclusive = true }
                                 }
-                            }
+                            },
+                            viewModel = primaryUnlockViewModel()
                         )
                     }
                     composable(ROUTE_CHANGE_PIN) {
                         // Reuses the same create-a-PIN flow as first-run setup;
                         // here it just pops back to Settings instead of going Home.
-                        PinSetupScreen(onComplete = { navController.popBackStack() })
+                        PinSetupScreen(
+                            onComplete = { navController.popBackStack() },
+                            viewModel = primarySetupViewModel()
+                        )
                     }
                     composable(
                         route = ROUTE_NOTE_PIN_SETUP,

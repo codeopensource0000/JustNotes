@@ -17,21 +17,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class AuthUnlockViewModel @JvmOverloads constructor(
+class AuthUnlockViewModel(
     application: Application,
-    // Defaults to the primary PIN; the secondary-lock gate screen supplies
-    // PinManager.forSecondary() via a custom ViewModelProvider.Factory instead
-    // (the default viewModel() factory can't pass extra constructor args).
-    // @JvmOverloads is required for that default factory to keep working at
-    // all: without it, Kotlin compiles a single (Application, PinManager)
-    // constructor, and the factory's reflection lookup for a lone-Application
-    // constructor fails with NoSuchMethodException.
-    private val pinManager: PinManager = PinManager.forPrimary(application),
-    // Null for the primary lock, which is a gate and nothing more. For a
-    // note's secondary lock this is the note being opened: the code typed here
-    // is the only thing its content key can be derived from, so the key has to
-    // be handed to NoteKeySession now — the editor has no way to get it later.
-    private val noteId: Long? = null
+    // No default. It used to fall back to the primary code, which compiled
+    // and ran perfectly well on a note's lock screen — and silently opened
+    // that note with the wrong secret. Every caller now says which code it
+    // means, so the compiler holds the invariant instead of a comment.
+    private val pinManager: PinManager,
+    // Null means the primary lock, which gates the app and encrypts nothing.
+    // A note id means the code typed here is what its content key is derived
+    // from, so the key has to be handed to NoteKeySession now.
+    private val noteId: Long?
 ) : AndroidViewModel(application) {
 
     var pin by mutableStateOf("")

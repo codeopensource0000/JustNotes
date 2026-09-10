@@ -9,6 +9,8 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import code.opensource0000.justnotes.editing.EditedText
+import code.opensource0000.justnotes.editing.MarkdownEditing
 import code.opensource0000.justnotes.data.NotesRepository
 import code.opensource0000.justnotes.data.RoomNotesRepository
 import code.opensource0000.justnotes.data.local.FolderEntity
@@ -193,46 +195,24 @@ class NoteEditorViewModel @JvmOverloads constructor(
 
     fun applyChecklist() = prefixCurrentLine("- [ ] ")
 
-    // Wraps the selected text in a Markdown marker (bold/italic). With an
-    // actual selection, wraps it directly. With no selection, an empty pair
-    // like "****" can't be hidden by the live-preview transform (it requires
-    // at least one character inside to recognise the span at all) and would
-    // show literal asterisks until something is typed — so instead this
-    // inserts a placeholder word, already selected, which hides immediately
-    // and gets replaced the moment the user starts typing.
+    // Thin adapters over MarkdownEditing: the index arithmetic lives there,
+    // where it can be tested without a phone.
     private fun wrapSelection(marker: String, placeholderForEmpty: String) {
         val value = contentField
-        val text = value.text
-        val selection = value.selection
-        if (selection.collapsed) {
-            val newText = text.substring(0, selection.start) +
-                marker + placeholderForEmpty + marker +
-                text.substring(selection.start)
-            val placeholderStart = selection.start + marker.length
-            contentField = TextFieldValue(
-                newText,
-                TextRange(placeholderStart, placeholderStart + placeholderForEmpty.length)
-            )
-            return
-        }
-        val newText = text.substring(0, selection.start) +
-            marker +
-            text.substring(selection.start, selection.end) +
-            marker +
-            text.substring(selection.end)
-        contentField = TextFieldValue(newText, TextRange(selection.end + marker.length * 2))
+        contentField = MarkdownEditing.wrapSelection(
+            text = value.text,
+            selectionStart = value.selection.start,
+            selectionEnd = value.selection.end,
+            marker = marker,
+            placeholderForEmpty = placeholderForEmpty
+        ).toTextFieldValue()
     }
 
-    // Inserts a Markdown line prefix (heading/bullet/checkbox) at the start
-    // of the line the cursor is currently on.
     private fun prefixCurrentLine(prefix: String) {
         val value = contentField
-        val text = value.text
-        val cursor = value.selection.start
-        val newlineIndex = if (cursor == 0) -1 else text.lastIndexOf('\n', cursor - 1)
-        val lineStart = if (newlineIndex == -1) 0 else newlineIndex + 1
-        val newText = text.substring(0, lineStart) + prefix + text.substring(lineStart)
-        contentField = TextFieldValue(newText, TextRange(cursor + prefix.length))
+        contentField = MarkdownEditing
+            .prefixCurrentLine(value.text, value.selection.start, prefix)
+            .toTextFieldValue()
     }
 
     // One-shot signal: this note has just been marked locked but has no PIN
@@ -351,15 +331,11 @@ class NoteEditorViewModel @JvmOverloads constructor(
         }
     }
 
-    // Inserts a recognized phrase at the cursor, adding a separating space
-    // only when needed so consecutive utterances don't run into each other.
-    private fun insertDictatedText(text: String) {
+    private fun insertDictatedText(phrase: String) {
         val value = contentField
-        val cursor = value.selection.start
-        val needsLeadingSpace = cursor > 0 && !value.text[cursor - 1].isWhitespace()
-        val insertion = (if (needsLeadingSpace) " " else "") + text + " "
-        val newText = value.text.substring(0, cursor) + insertion + value.text.substring(cursor)
-        contentField = TextFieldValue(newText, TextRange(cursor + insertion.length))
+        contentField = MarkdownEditing
+            .insertDictated(value.text, value.selection.start, phrase)
+            .toTextFieldValue()
     }
 
     override fun onCleared() {
@@ -528,3 +504,6 @@ class NoteEditorViewModel @JvmOverloads constructor(
         }
     }
 }
+
+private fun EditedText.toTextFieldValue() =
+    TextFieldValue(text, TextRange(selectionStart, selectionEnd))

@@ -17,20 +17,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class AuthSetupViewModel @JvmOverloads constructor(
+class AuthSetupViewModel(
     application: Application,
-    // Defaults to the primary PIN so every existing call site (first-run
-    // setup, "change code" in Settings) keeps working unchanged; the
-    // secondary-lock setup screen supplies PinManager.forNote() instead.
-    // @JvmOverloads is required for the default viewModel() factory to still
-    // find a lone-Application constructor via reflection — see the identical
-    // note in AuthUnlockViewModel.
-    private val pinManager: PinManager = PinManager.forPrimary(application),
-    // Null for the primary lock. For a note, the code chosen here is what its
-    // content key comes from, and the editor is sitting behind this screen
-    // waiting to encrypt what is already on screen — so the key is derived and
-    // handed over as soon as the code is confirmed. See AuthUnlockViewModel.
-    private val noteId: Long? = null
+    // No default. It used to fall back to the primary code, which compiled
+    // and ran perfectly well on a note's lock screen — and silently opened
+    // that note with the wrong secret. Every caller now says which code it
+    // means, so the compiler holds the invariant instead of a comment.
+    private val pinManager: PinManager,
+    // Null means the primary lock, which gates the app and encrypts nothing.
+    // A note id means the code typed here is what its content key is derived
+    // from, so the key has to be handed to NoteKeySession now.
+    private val noteId: Long?
 ) : AndroidViewModel(application) {
 
     enum class Stage { ENTER_NEW, CONFIRM }

@@ -25,7 +25,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.viewmodel.compose.viewModel
 import code.opensource0000.justnotes.R
 import code.opensource0000.justnotes.security.PinManager
 import code.opensource0000.justnotes.ui.components.PinDots
@@ -51,7 +50,7 @@ fun LockScreen(
     // of whatever the user was doing; letting system back dismiss it would
     // make the lock decorative.
     blockSystemBack: Boolean = false,
-    viewModel: AuthUnlockViewModel = viewModel()
+    viewModel: AuthUnlockViewModel
 ) {
     if (blockSystemBack) {
         BackHandler {}

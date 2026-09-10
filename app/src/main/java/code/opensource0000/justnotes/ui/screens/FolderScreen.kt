@@ -21,20 +21,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import code.opensource0000.justnotes.R
-import code.opensource0000.justnotes.data.local.NoteEntity
-import code.opensource0000.justnotes.ui.components.DeleteConfirmDialog
 import code.opensource0000.justnotes.ui.components.EmptyState
-import code.opensource0000.justnotes.ui.components.MoveToFolderDialog
-import code.opensource0000.justnotes.ui.components.NoteOptionsDialog
+import code.opensource0000.justnotes.ui.components.NoteActionDialogs
 import code.opensource0000.justnotes.ui.components.NoteRow
+import code.opensource0000.justnotes.ui.components.rememberNoteActionsState
 import code.opensource0000.justnotes.ui.components.folderLabel
 
 @Composable
@@ -47,48 +42,13 @@ fun FolderScreen(
     val notes by viewModel.notes.collectAsState()
     val allFolders by viewModel.allFolders.collectAsState()
 
-    var noteOptionsFor by remember { mutableStateOf<NoteEntity?>(null) }
-    var moveNoteTarget by remember { mutableStateOf<NoteEntity?>(null) }
-    var noteDeleteTarget by remember { mutableStateOf<NoteEntity?>(null) }
-
-    noteOptionsFor?.let { note ->
-        NoteOptionsDialog(
-            noteTitle = note.title.ifBlank { stringResource(R.string.editor_title_placeholder) },
-            onDismiss = { noteOptionsFor = null },
-            onMove = {
-                moveNoteTarget = note
-                noteOptionsFor = null
-            },
-            onDelete = {
-                noteDeleteTarget = note
-                noteOptionsFor = null
-            }
-        )
-    }
-
-    moveNoteTarget?.let { note ->
-        MoveToFolderDialog(
-            folders = allFolders,
-            currentFolderId = note.folderId,
-            onDismiss = { moveNoteTarget = null },
-            onSelect = { folderId ->
-                viewModel.moveNote(note.id, folderId)
-                moveNoteTarget = null
-            }
-        )
-    }
-
-    noteDeleteTarget?.let { note ->
-        DeleteConfirmDialog(
-            title = stringResource(R.string.note_delete_confirm_title),
-            message = stringResource(R.string.note_delete_confirm_message),
-            onDismiss = { noteDeleteTarget = null },
-            onConfirm = {
-                viewModel.deleteNote(note)
-                noteDeleteTarget = null
-            }
-        )
-    }
+    val noteActions = rememberNoteActionsState()
+    NoteActionDialogs(
+        state = noteActions,
+        folders = allFolders,
+        onMove = viewModel::moveNote,
+        onDelete = viewModel::deleteNote
+    )
 
     // Scaffold (rather than a bare Column) paints the themed background and
     // keeps content clear of the status bar / notch, matching every other screen.
@@ -128,7 +88,7 @@ fun FolderScreen(
                         NoteRow(
                             note,
                             onClick = { onOpenNote(note.id, note.isLocked) },
-                            onLongClick = { noteOptionsFor = note }
+                            onLongClick = { noteActions.show(note) }
                         )
                     }
                 }

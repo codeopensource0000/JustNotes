@@ -50,11 +50,11 @@ import code.opensource0000.justnotes.data.local.FolderWithNoteCount
 import code.opensource0000.justnotes.data.local.NoteEntity
 import code.opensource0000.justnotes.ui.components.DeleteConfirmDialog
 import code.opensource0000.justnotes.ui.components.EmptyState
-import code.opensource0000.justnotes.ui.components.MoveToFolderDialog
 import code.opensource0000.justnotes.ui.components.NewFolderDialog
-import code.opensource0000.justnotes.ui.components.NoteOptionsDialog
+import code.opensource0000.justnotes.ui.components.NoteActionDialogs
 import code.opensource0000.justnotes.ui.components.NoteRow
 import code.opensource0000.justnotes.ui.components.folderLabel
+import code.opensource0000.justnotes.ui.components.rememberNoteActionsState
 import code.opensource0000.justnotes.ui.theme.JustNotesTheme
 import code.opensource0000.justnotes.ui.theme.WordmarkStyle
 
@@ -84,11 +84,9 @@ fun HomeScreen(
     val allFolders by viewModel.allFolders.collectAsState()
     var showNewFolderDialog by remember { mutableStateOf(false) }
 
-    // Long-press state: which note/folder the currently-open dialog (if any)
-    // applies to. Only one of these is non-null at a time.
-    var noteOptionsFor by remember { mutableStateOf<NoteEntity?>(null) }
-    var moveNoteTarget by remember { mutableStateOf<NoteEntity?>(null) }
-    var noteDeleteTarget by remember { mutableStateOf<NoteEntity?>(null) }
+    // The note half of this is shared with FolderScreen; only folder deletion
+    // is particular to this screen.
+    val noteActions = rememberNoteActionsState()
     var folderDeleteTarget by remember { mutableStateOf<FolderWithNoteCount?>(null) }
 
     if (showNewFolderDialog) {
@@ -101,44 +99,12 @@ fun HomeScreen(
         )
     }
 
-    noteOptionsFor?.let { note ->
-        NoteOptionsDialog(
-            noteTitle = note.title.ifBlank { stringResource(R.string.editor_title_placeholder) },
-            onDismiss = { noteOptionsFor = null },
-            onMove = {
-                moveNoteTarget = note
-                noteOptionsFor = null
-            },
-            onDelete = {
-                noteDeleteTarget = note
-                noteOptionsFor = null
-            }
-        )
-    }
-
-    moveNoteTarget?.let { note ->
-        MoveToFolderDialog(
-            folders = allFolders,
-            currentFolderId = note.folderId,
-            onDismiss = { moveNoteTarget = null },
-            onSelect = { folderId ->
-                viewModel.moveNote(note.id, folderId)
-                moveNoteTarget = null
-            }
-        )
-    }
-
-    noteDeleteTarget?.let { note ->
-        DeleteConfirmDialog(
-            title = stringResource(R.string.note_delete_confirm_title),
-            message = stringResource(R.string.note_delete_confirm_message),
-            onDismiss = { noteDeleteTarget = null },
-            onConfirm = {
-                viewModel.deleteNote(note)
-                noteDeleteTarget = null
-            }
-        )
-    }
+    NoteActionDialogs(
+        state = noteActions,
+        folders = allFolders,
+        onMove = viewModel::moveNote,
+        onDelete = viewModel::deleteNote
+    )
 
     folderDeleteTarget?.let { folder ->
         DeleteConfirmDialog(
@@ -200,7 +166,7 @@ fun HomeScreen(
                 0 -> RecentNotesList(
                     notes = recentNotes,
                     onOpenNote = onOpenNote,
-                    onLongClickNote = { note -> noteOptionsFor = note }
+                    onLongClickNote = { note -> noteActions.show(note) }
                 )
                 else -> FoldersList(
                     folders = folders,

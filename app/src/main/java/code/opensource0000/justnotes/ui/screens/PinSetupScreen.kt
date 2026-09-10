@@ -20,7 +20,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.viewmodel.compose.viewModel
 import code.opensource0000.justnotes.R
 import code.opensource0000.justnotes.security.PinManager
 import code.opensource0000.justnotes.ui.components.PinDots
@@ -38,7 +37,7 @@ fun PinSetupScreen(
     // does — otherwise the system back button could leave the note marked
     // locked with no code ever actually set for it.
     blockSystemBack: Boolean = false,
-    viewModel: AuthSetupViewModel = viewModel()
+    viewModel: AuthSetupViewModel
 ) {
     if (blockSystemBack) {
         BackHandler {}
