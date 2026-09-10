@@ -11,11 +11,15 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -80,6 +84,10 @@ import code.opensource0000.justnotes.ui.components.RadioRow
 import code.opensource0000.justnotes.ui.components.folderLabel
 import code.opensource0000.justnotes.ui.theme.NoteTitleStyle
 import kotlinx.coroutines.launch
+
+// Breathing room above and below the writing area. Named because the minimum
+// field height is derived from it — see the content field below.
+private val CONTENT_VERTICAL_PADDING = 8.dp
 
 // Transparent container + no underline: the title and content fields read
 // as a writing surface, not a boxed form field.
@@ -459,19 +467,50 @@ fun NoteEditorScreen(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-            TextField(
-                value = viewModel.contentField,
-                onValueChange = viewModel::onContentChange,
-                placeholder = { Text(stringResource(R.string.editor_content_placeholder)) },
-                visualTransformation = MarkdownVisualTransformation,
-                colors = PaperFieldColors,
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            // The writing area scrolls; the field inside it grows freely.
+            //
+            // It used to be the other way round: weight(1f) capped the field's
+            // height, so a note longer than the screen was simply clipped —
+            // no scrolling by hand, and no following the caret as you typed
+            // past the bottom. A TextField only scrolls its own content in
+            // narrow cases, and this was not one of them.
+            //
+            // Growing inside a scrollable parent also gets the caret handling
+            // for free: the text field asks to be brought into view, and the
+            // nearest scrolling ancestor obliges.
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                    .focusRequester(contentFocusRequester)
-            )
+            ) {
+                // Minus the padding below, so an empty note fills exactly one
+                // screen rather than one screen plus a sliver of slack.
+                val minFieldHeight = maxHeight - CONTENT_VERTICAL_PADDING * 2
+                Column(
+                    modifier = Modifier
+                        .verticalScroll(rememberScrollState())
+                        .padding(
+                            horizontal = 12.dp,
+                            vertical = CONTENT_VERTICAL_PADDING
+                        )
+                ) {
+                    TextField(
+                        value = viewModel.contentField,
+                        onValueChange = viewModel::onContentChange,
+                        placeholder = { Text(stringResource(R.string.editor_content_placeholder)) },
+                        visualTransformation = MarkdownVisualTransformation,
+                        colors = PaperFieldColors,
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            // At least a full screen tall, so tapping anywhere
+                            // in the empty space below a short note puts the
+                            // caret in it rather than doing nothing.
+                            .heightIn(min = minFieldHeight)
+                            .focusRequester(contentFocusRequester)
+                    )
+                }
+            }
         }
     }
 }
