@@ -11,15 +11,11 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -85,10 +81,6 @@ import code.opensource0000.justnotes.ui.components.RadioRow
 import code.opensource0000.justnotes.ui.components.folderLabel
 import code.opensource0000.justnotes.ui.theme.NoteTitleStyle
 import kotlinx.coroutines.launch
-
-// Breathing room above and below the writing area. Named because the minimum
-// field height is derived from it — see the content field below.
-private val CONTENT_VERTICAL_PADDING = 8.dp
 
 // Transparent container + no underline: the title and content fields read
 // as a writing surface, not a boxed form field.
@@ -371,15 +363,19 @@ fun NoteEditorScreen(
                 // The keyboard's own inset. Scaffold reserves room for the
                 // system bars but not for the IME, and since the app draws
                 // edge-to-edge the manifest's adjustResize no longer shrinks
-                // the window either — Android 15 leaves that to the app. So
-                // without this the keyboard simply covered the lower half of
-                // the note, caret included.
+                // the window either — Android 15 leaves that to the app.
                 //
-                // Applied to the whole column rather than to the text area, so
-                // the toolbar stays put and only the writing area gives up the
-                // height. BoxWithConstraints below then measures the reduced
-                // space, and the caret keeps itself in view against what is
-                // actually visible.
+                // This is the whole fix. The content field below keeps its
+                // bounded height, which is what lets it scroll itself and
+                // follow the caret; all that was missing was for its bounds to
+                // stop above the keyboard instead of running underneath it.
+                //
+                // Putting the field inside a scrolling parent instead, as an
+                // earlier attempt did, makes things worse: an unbounded height
+                // removes the field's own scroller, and Compose does not ask a
+                // parent scroll container to follow the caret. Scrolling then
+                // only happens once the whole page overflows, never while
+                // typing — which is exactly the symptom that was reported.
                 .imePadding()
         ) {
             Row(
@@ -415,6 +411,24 @@ fun NoteEditorScreen(
                 }
             }
 
+            TextField(
+                value = viewModel.title,
+                onValueChange = viewModel::onTitleChange,
+                placeholder = { Text(stringResource(R.string.editor_title_placeholder), style = NoteTitleStyle) },
+                textStyle = NoteTitleStyle,
+                colors = PaperFieldColors,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
+            )
+
+            TextButton(onClick = { showFolderPicker = true }, modifier = Modifier.padding(start = 4.dp)) {
+                Icon(Icons.Filled.Folder, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = folderLabel(viewModel.folderName, viewModel.folderIsDefault),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
 
             // Inserts Markdown markers into the plain-text content at the
             // cursor/selection — there is no live bold/italic rendering here,
@@ -463,76 +477,19 @@ fun NoteEditorScreen(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-            // The writing area scrolls; the field inside it grows freely.
-            //
-            // It used to be the other way round: weight(1f) capped the field's
-            // height, so a note longer than the screen was simply clipped —
-            // no scrolling by hand, and no following the caret as you typed
-            // past the bottom. A TextField only scrolls its own content in
-            // narrow cases, and this was not one of them.
-            //
-            // Growing inside a scrollable parent also gets the caret handling
-            // for free: the text field asks to be brought into view, and the
-            // nearest scrolling ancestor obliges.
-            BoxWithConstraints(
+            TextField(
+                value = viewModel.contentField,
+                onValueChange = viewModel::onContentChange,
+                placeholder = { Text(stringResource(R.string.editor_content_placeholder)) },
+                visualTransformation = MarkdownVisualTransformation,
+                colors = PaperFieldColors,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-            ) {
-                // Minus the padding below, so an empty note fills exactly one
-                // screen rather than one screen plus a sliver of slack.
-                val minFieldHeight = maxHeight - CONTENT_VERTICAL_PADDING * 2
-                Column(
-                    modifier = Modifier
-                        .verticalScroll(rememberScrollState())
-                        .padding(
-                            horizontal = 12.dp,
-                            vertical = CONTENT_VERTICAL_PADDING
-                        )
-                ) {
-                    // Title and folder live inside the scrolling area, not
-                    // above it. They are the note's content, not the editor's
-                    // chrome — and treating them as chrome cost real height:
-                    // with the keyboard up in landscape only ~124dp of the
-                    // window is left, and a fixed action bar plus a fixed
-                    // title plus the folder chip consumed all of it, leaving
-                    // the writing area at zero height. Measured, not guessed.
-                    TextField(
-                        value = viewModel.title,
-                        onValueChange = viewModel::onTitleChange,
-                        placeholder = { Text(stringResource(R.string.editor_title_placeholder), style = NoteTitleStyle) },
-                        textStyle = NoteTitleStyle,
-                        colors = PaperFieldColors,
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
-                    )
-
-                    TextButton(onClick = { showFolderPicker = true }, modifier = Modifier.padding(start = 4.dp)) {
-                        Icon(Icons.Filled.Folder, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = folderLabel(viewModel.folderName, viewModel.folderIsDefault),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-
-                    TextField(
-                        value = viewModel.contentField,
-                        onValueChange = viewModel::onContentChange,
-                        placeholder = { Text(stringResource(R.string.editor_content_placeholder)) },
-                        visualTransformation = MarkdownVisualTransformation,
-                        colors = PaperFieldColors,
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            // At least a full screen tall, so tapping anywhere
-                            // in the empty space below a short note puts the
-                            // caret in it rather than doing nothing.
-                            .heightIn(min = minFieldHeight)
-                            .focusRequester(contentFocusRequester)
-                    )
-                }
-            }
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .focusRequester(contentFocusRequester)
+            )
         }
     }
 }
