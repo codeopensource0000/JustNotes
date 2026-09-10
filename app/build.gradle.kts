@@ -84,6 +84,25 @@ android {
         compose = true
     }
 
+    // Vosk ships its native library for every Android architecture, so the
+    // APK carried four copies of it — 38.5 MB of which a given phone runs
+    // exactly one. Splitting cuts the download from ~120 MB to ~92 MB without
+    // touching a line of code.
+    //
+    // x86 and x86_64 are left out: they exist for emulators, and anyone
+    // running one is building from source anyway. armeabi-v7a stays for
+    // 32-bit phones, marginal at minSdk 26 but cheap to keep.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            // A universal APK alongside them, so nobody has to know what a
+            // "supported ABI" is to install the app.
+            isUniversalApk = true
+        }
+    }
+
     bundle {
         language {
             // Mandatory here, and the failure is invisible in testing. Play
