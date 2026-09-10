@@ -415,24 +415,6 @@ fun NoteEditorScreen(
                 }
             }
 
-            TextField(
-                value = viewModel.title,
-                onValueChange = viewModel::onTitleChange,
-                placeholder = { Text(stringResource(R.string.editor_title_placeholder), style = NoteTitleStyle) },
-                textStyle = NoteTitleStyle,
-                colors = PaperFieldColors,
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
-            )
-
-            TextButton(onClick = { showFolderPicker = true }, modifier = Modifier.padding(start = 4.dp)) {
-                Icon(Icons.Filled.Folder, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = folderLabel(viewModel.folderName, viewModel.folderIsDefault),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
 
             // Inserts Markdown markers into the plain-text content at the
             // cursor/selection — there is no live bold/italic rendering here,
@@ -508,6 +490,32 @@ fun NoteEditorScreen(
                             vertical = CONTENT_VERTICAL_PADDING
                         )
                 ) {
+                    // Title and folder live inside the scrolling area, not
+                    // above it. They are the note's content, not the editor's
+                    // chrome — and treating them as chrome cost real height:
+                    // with the keyboard up in landscape only ~124dp of the
+                    // window is left, and a fixed action bar plus a fixed
+                    // title plus the folder chip consumed all of it, leaving
+                    // the writing area at zero height. Measured, not guessed.
+                    TextField(
+                        value = viewModel.title,
+                        onValueChange = viewModel::onTitleChange,
+                        placeholder = { Text(stringResource(R.string.editor_title_placeholder), style = NoteTitleStyle) },
+                        textStyle = NoteTitleStyle,
+                        colors = PaperFieldColors,
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
+                    )
+
+                    TextButton(onClick = { showFolderPicker = true }, modifier = Modifier.padding(start = 4.dp)) {
+                        Icon(Icons.Filled.Folder, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = folderLabel(viewModel.folderName, viewModel.folderIsDefault),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+
                     TextField(
                         value = viewModel.contentField,
                         onValueChange = viewModel::onContentChange,
