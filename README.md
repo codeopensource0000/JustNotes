@@ -68,7 +68,17 @@ The cost of that choice, stated plainly: someone who obtains a copy of the app's
 If you only want to *use* JustNotes, you do not need Android Studio or any of
 the build steps below.
 
-1. Download `app-release.apk` from the [Releases](https://github.com/codeopensource0000/JustNotes/releases) page.
+1. Download an APK from the [Releases](https://github.com/codeopensource0000/JustNotes/releases)
+   page. If you are not sure which, take `app-universal-release.apk` — it
+   works on every phone. The other two hold a single processor architecture
+   instead of all of them, which makes them about 30 MB smaller:
+
+   | File | Size | For |
+   | --- | --- | --- |
+   | `app-universal-release.apk` | 120 MB | Any phone — the safe choice |
+   | `app-arm64-v8a-release.apk` | 91 MB | Almost every phone made since ~2017 |
+   | `app-armeabi-v7a-release.apk` | 90 MB | Older 32-bit phones |
+
 2. Check that you got what was published — see [Verifying the
    download](#verifying-the-download) just below. Worth doing for any app you
    install outside a store, and doubly so for one holding your notes.
@@ -76,9 +86,8 @@ the build steps below.
    this source; that prompt is normal for any app installed outside the Play
    Store, and the permission can be revoked afterwards.
 
-**Requirements:** Android 8.0 (API 26) or newer, and about 250 MB free — the
-app is roughly 120 MB, and installing a voice model unpacks another ~40 MB
-next to it.
+**Requirements:** Android 8.0 (API 26) or newer, and about 220 MB free — the
+app itself, plus another ~40 MB once a voice model is unpacked next to it.
 
 **Before you rely on it, two things are worth knowing:**
 
@@ -97,7 +106,7 @@ Every released APK is signed with the same key. You can check that the file
 you downloaded really came from this project:
 
 ```sh
-apksigner verify --print-certs app-release.apk
+apksigner verify --print-certs app-universal-release.apk
 ```
 
 The certificate's SHA-256 digest must be:
