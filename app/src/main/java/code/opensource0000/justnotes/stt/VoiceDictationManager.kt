@@ -59,6 +59,9 @@ class VoiceDictationManager private constructor(context: Context) {
             val service = SpeechService(newRecognizer, SAMPLE_RATE)
             speechService = service
             service.startListening(object : RecognitionListener {
+                // Partial hypotheses change on every syllable; inserting them
+                // would make the note flicker as Vosk changes its mind.
+                @Suppress("EmptyFunctionBlock")
                 override fun onPartialResult(hypothesis: String) {}
                 override fun onResult(hypothesis: String) {
                     extractText(hypothesis)?.let(onUtterance)
@@ -69,6 +72,9 @@ class VoiceDictationManager private constructor(context: Context) {
                 override fun onError(exception: Exception) {
                     onError(exception)
                 }
+                // Vosk's own silence timeout. Dictation is stopped by the
+                // user tapping the mic again, not by going quiet.
+                @Suppress("EmptyFunctionBlock")
                 override fun onTimeout() {}
             })
         } catch (e: Exception) {

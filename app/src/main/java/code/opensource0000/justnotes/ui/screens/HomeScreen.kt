@@ -42,7 +42,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import code.opensource0000.justnotes.R
@@ -54,8 +53,7 @@ import code.opensource0000.justnotes.ui.components.NewFolderDialog
 import code.opensource0000.justnotes.ui.components.NoteActionDialogs
 import code.opensource0000.justnotes.ui.components.NoteRow
 import code.opensource0000.justnotes.ui.components.folderLabel
-import code.opensource0000.justnotes.ui.components.rememberNoteActionsState
-import code.opensource0000.justnotes.ui.theme.JustNotesTheme
+import code.opensource0000.justnotes.ui.components.rememberNoteActions
 import code.opensource0000.justnotes.ui.theme.WordmarkStyle
 
 @Composable
@@ -86,7 +84,7 @@ fun HomeScreen(
 
     // The note half of this is shared with FolderScreen; only folder deletion
     // is particular to this screen.
-    val noteActions = rememberNoteActionsState()
+    val noteActions = rememberNoteActions()
     var folderDeleteTarget by remember { mutableStateOf<FolderWithNoteCount?>(null) }
 
     if (showNewFolderDialog) {
@@ -320,14 +318,3 @@ private fun FolderRow(folder: FolderWithNoteCount, onClick: () -> Unit, onLongCl
     }
 }
 
-// No @Preview here anymore: HomeScreen now requires a real HomeViewModel
-// (backed by an Android Application context to open the database), which
-// the lightweight Preview sandbox cannot provide. Verifying this screen now
-// means running the app for real, on an emulator or device.
-@Preview(showBackground = true)
-@Composable
-private fun HomeScreenTitlePreview() {
-    JustNotesTheme {
-        Text(text = "JustNotes", style = MaterialTheme.typography.headlineSmall)
-    }
-}

@@ -226,7 +226,9 @@ fun NoteEditorScreen(
                             showExportDialog = false
                             activity?.let { act ->
                                 coroutineScope.launch {
-                                    NoteExporter.export(act, viewModel.title, viewModel.content, ExportFormat.PLAIN_TEXT)
+                                    NoteExporter.export(
+                                        act, viewModel.title, viewModel.content, ExportFormat.PLAIN_TEXT
+                                    )
                                 }
                             }
                         }
@@ -438,14 +440,20 @@ fun NoteEditorScreen(
                 IconButton(onClick = { viewModel.applyBold(formatPlaceholder); contentFocusRequester.requestFocus() }) {
                     Icon(Icons.Filled.FormatBold, contentDescription = stringResource(R.string.editor_format_bold))
                 }
-                IconButton(onClick = { viewModel.applyItalic(formatPlaceholder); contentFocusRequester.requestFocus() }) {
+                IconButton(onClick = {
+                    viewModel.applyItalic(formatPlaceholder)
+                    contentFocusRequester.requestFocus()
+                }) {
                     Icon(Icons.Filled.FormatItalic, contentDescription = stringResource(R.string.editor_format_italic))
                 }
                 IconButton(onClick = { viewModel.applyHeading(); contentFocusRequester.requestFocus() }) {
                     Icon(Icons.Filled.Title, contentDescription = stringResource(R.string.editor_format_heading))
                 }
                 IconButton(onClick = { viewModel.applyBulletList(); contentFocusRequester.requestFocus() }) {
-                    Icon(Icons.AutoMirrored.Filled.FormatListBulleted, contentDescription = stringResource(R.string.editor_format_list))
+                    Icon(
+                        Icons.AutoMirrored.Filled.FormatListBulleted,
+                        contentDescription = stringResource(R.string.editor_format_list)
+                    )
                 }
                 IconButton(onClick = { viewModel.applyChecklist(); contentFocusRequester.requestFocus() }) {
                     Icon(Icons.Filled.CheckBox, contentDescription = stringResource(R.string.editor_format_checklist))
@@ -469,7 +477,11 @@ fun NoteEditorScreen(
                         contentDescription = stringResource(
                             if (viewModel.isListening) R.string.editor_format_mic_stop else R.string.editor_format_mic
                         ),
-                        tint = if (viewModel.isListening) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                        tint = if (viewModel.isListening) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            LocalContentColor.current
+                        },
                         modifier = Modifier.alpha(if (viewModel.isListening) micPulseAlpha else 1f)
                     )
                 }

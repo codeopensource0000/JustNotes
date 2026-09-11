@@ -17,7 +17,7 @@ import code.opensource0000.justnotes.data.local.NoteEntity
 // so both carried the same three pieces of state and the same three dialog
 // blocks, copied word for word. Any change to the menu had to be made twice,
 // and the day it was made once the two screens would quietly disagree.
-class NoteActionsState {
+class NoteActions {
     // Only one of these is ever non-null: each step hands over to the next.
     var optionsFor by mutableStateOf<NoteEntity?>(null)
         internal set
@@ -30,11 +30,11 @@ class NoteActionsState {
 }
 
 @Composable
-fun rememberNoteActionsState(): NoteActionsState = remember { NoteActionsState() }
+fun rememberNoteActions(): NoteActions = remember { NoteActions() }
 
 @Composable
 fun NoteActionDialogs(
-    state: NoteActionsState,
+    state: NoteActions,
     folders: List<FolderEntity>,
     onMove: (noteId: Long, folderId: Long) -> Unit,
     onDelete: (NoteEntity) -> Unit

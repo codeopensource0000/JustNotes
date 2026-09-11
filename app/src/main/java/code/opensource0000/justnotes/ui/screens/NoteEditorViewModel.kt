@@ -82,7 +82,11 @@ class NoteEditorViewModel @JvmOverloads constructor(
     // All folders, for the picker dialog — plain list (no note counts, unlike
     // HomeScreen's Folders tab), since that number would just be noise here.
     val folders: StateFlow<List<FolderEntity>> = repository.observeFolders()
-        .stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = emptyList())
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = emptyList()
+        )
 
     fun selectFolder(folder: FolderEntity) {
         folderId = folder.id

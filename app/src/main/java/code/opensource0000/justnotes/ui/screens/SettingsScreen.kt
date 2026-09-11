@@ -147,7 +147,10 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = stringResource(R.string.settings_auth_toggle), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        text = stringResource(R.string.settings_auth_toggle),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                     Text(
                         text = stringResource(R.string.settings_auth_toggle_sub),
                         style = MaterialTheme.typography.bodySmall,
@@ -246,7 +249,14 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { pendingAppLanguage = null },
             title = { Text("Changer la langue ? / Change language?") },
-            text = { Text("L'application va redémarrer et vous redemandera votre code si l'authentification est activée.\nThe app will restart and will ask for your code again if authentication is on.") },
+            text = {
+                Text(
+                    "L'application va redémarrer et vous redemandera votre code " +
+                        "si l'authentification est activée.\n" +
+                        "The app will restart and will ask for your code again " +
+                        "if authentication is on."
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.onAppLanguageChange(targetLanguage)

@@ -39,6 +39,12 @@ class VoskModelManager private constructor(context: Context) {
 
     fun state(language: DictationLanguage): StateFlow<VoskModelState> = states.getValue(language)
 
+    // Kept so a failed install is diagnosable at all. The app writes no logs
+    // by design, so without this the cause of an ERROR state is simply gone —
+    // the user sees "install failed, try again" and nobody can say why.
+    var lastError: Exception? = null
+        private set
+
     fun modelDir(language: DictationLanguage): File = language.modelDir(appContext)
 
     // Caller decides the dispatcher (viewModelScope.launch(Dispatchers.IO)),
@@ -52,6 +58,7 @@ class VoskModelManager private constructor(context: Context) {
             language.readyMarker(appContext).createNewFile()
             stateFlow.value = VoskModelState.READY
         } catch (e: Exception) {
+            lastError = e
             // Deliberately broader than IOException: anything escaping here
             // used to leave the state pinned at INSTALLING forever, turning
             // the Settings button into a spinner that never stops and offers

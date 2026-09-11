@@ -6,6 +6,10 @@ package code.opensource0000.justnotes.export
 // formatting in any browser instead of raw "**" characters.
 object MarkdownToHtml {
 
+    // "- [ ] " and "- [x] " are both six characters; the task text starts
+    // right after.
+    private const val CHECKBOX_PREFIX_LENGTH = 6
+
     private val boldRegex = Regex("\\*\\*(.+?)\\*\\*", RegexOption.DOT_MATCHES_ALL)
     private val italicRegex = Regex("(?<!\\*)\\*(?!\\*)(.+?)(?<!\\*)\\*(?!\\*)", RegexOption.DOT_MATCHES_ALL)
 
@@ -45,13 +49,13 @@ object MarkdownToHtml {
                 line.startsWith("- [x] ", ignoreCase = true) -> {
                     if (!inList) { append("<ul>\n"); inList = true }
                     append("<li><input type=\"checkbox\" checked disabled> ")
-                        .append(inlineHtml(line.substring(6)))
+                        .append(inlineHtml(line.substring(CHECKBOX_PREFIX_LENGTH)))
                         .append("</li>\n")
                 }
                 line.startsWith("- [ ] ") -> {
                     if (!inList) { append("<ul>\n"); inList = true }
                     append("<li><input type=\"checkbox\" disabled> ")
-                        .append(inlineHtml(line.substring(6)))
+                        .append(inlineHtml(line.substring(CHECKBOX_PREFIX_LENGTH)))
                         .append("</li>\n")
                 }
                 line.startsWith("- ") -> {

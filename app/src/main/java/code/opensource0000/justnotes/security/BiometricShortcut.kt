@@ -34,6 +34,7 @@ object BiometricShortcut {
     private const val KEY_ALIAS_PREFIX = "justnotes_bio_key_"
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
     private const val GCM_TAG_LENGTH_BITS = 128
+    private const val AES_KEY_SIZE_BITS = 256
 
     // One file for every note's wrapped key, rather than one file per note:
     // turning the setting off has to erase all of them at once, and clearing a
@@ -147,7 +148,7 @@ object BiometricShortcut {
         )
             .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-            .setKeySize(256)
+            .setKeySize(AES_KEY_SIZE_BITS)
             .setUserAuthenticationRequired(true)
             // Kills the shortcut when a fingerprint is added or removed. Unlike
             // the time-bound key this app used to create, that flag genuinely

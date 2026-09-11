@@ -29,7 +29,7 @@ import code.opensource0000.justnotes.R
 import code.opensource0000.justnotes.ui.components.EmptyState
 import code.opensource0000.justnotes.ui.components.NoteActionDialogs
 import code.opensource0000.justnotes.ui.components.NoteRow
-import code.opensource0000.justnotes.ui.components.rememberNoteActionsState
+import code.opensource0000.justnotes.ui.components.rememberNoteActions
 import code.opensource0000.justnotes.ui.components.folderLabel
 
 @Composable
@@ -42,7 +42,7 @@ fun FolderScreen(
     val notes by viewModel.notes.collectAsState()
     val allFolders by viewModel.allFolders.collectAsState()
 
-    val noteActions = rememberNoteActionsState()
+    val noteActions = rememberNoteActions()
     NoteActionDialogs(
         state = noteActions,
         folders = allFolders,

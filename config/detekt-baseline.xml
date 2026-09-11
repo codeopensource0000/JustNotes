@@ -1,0 +1,12 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:MainActivity.kt$MainActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
+    <ID>CyclomaticComplexMethod:MarkdownToHtml.kt$MarkdownToHtml$private fun renderBody(content: String): String</ID>
+    <ID>CyclomaticComplexMethod:NoteEditorScreen.kt$@Composable fun NoteEditorScreen( noteId: Long, onBack: () -&gt; Unit, onRequestNotePinSetup: (noteId: Long) -&gt; Unit, initialFolderId: Long = -1L, viewModel: NoteEditorViewModel = viewModel() )</ID>
+    <ID>LongMethod:MainActivity.kt$MainActivity$override fun onCreate(savedInstanceState: Bundle?)</ID>
+    <ID>NestedBlockDepth:VoskModelManager.kt$VoskModelManager$private fun extractZip(language: DictationLanguage)</ID>
+    <ID>TooManyFunctions:NoteEditorViewModel.kt$NoteEditorViewModel : AndroidViewModel</ID>
+  </CurrentIssues>
+</SmellBaseline>

@@ -26,6 +26,10 @@ enum class ExportFormat(val extension: String, val mimeType: String) {
 // app in a form other tools can read.
 object NoteExporter {
 
+    // Long enough for any real title, short enough to stay well inside the
+    // filename limits of whatever app receives the share.
+    private const val MAX_FILENAME_LENGTH = 60
+
     // Every export leaves a readable copy behind in the cache, and for a note
     // protected by the secondary lock that copy is its decrypted text — which
     // used to survive the note being locked again, or deleted outright, for as
@@ -79,7 +83,7 @@ object NoteExporter {
         val base = title.trim()
             .ifBlank { "note" }
             .replace(Regex("[^\\p{L}\\p{N} _-]"), "_")
-            .take(60)
+            .take(MAX_FILENAME_LENGTH)
         return "$base.${format.extension}"
     }
 }

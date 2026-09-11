@@ -1,0 +1,49 @@
+# Dependabot watches the files below and opens a pull request whenever a
+# dependency has a newer version, or a published vulnerability. It runs on
+# GitHub's side — nothing to install, nothing to run locally.
+#
+# The point here is not to chase every release. It is that this project had
+# six dependencies quietly a version or more behind, and nothing at all
+# watching for security advisories. A pull request that sits unmerged is
+# still better than not knowing.
+version: 2
+
+updates:
+  # The app's own dependencies, read from gradle/libs.versions.toml.
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    # Without this, a quiet week still produces a handful of patch-bump PRs
+    # and the notifications stop being read.
+    open-pull-requests-limit: 5
+    groups:
+      # AndroidX releases move together; one PR for the set is reviewable,
+      # eight separate ones are not.
+      androidx:
+        patterns:
+          - "androidx.*"
+      kotlin-and-build:
+        patterns:
+          - "org.jetbrains.kotlin*"
+          - "com.android.*"
+          - "com.google.devtools.ksp*"
+    ignore:
+      # biometric 1.1.0 is the current stable despite its age, and it
+      # underpins the CryptoObject flow behind the per-note fingerprint
+      # shortcut. A major bump there needs a deliberate test pass, not an
+      # automatic merge.
+      - dependency-name: "androidx.biometric:biometric"
+        update-types: ["version-update:semver-major"]
+    commit-message:
+      prefix: "deps"
+
+  # The actions used by .github/workflows — these go stale silently, and an
+  # abandoned action is a supply-chain problem of its own.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "ci"

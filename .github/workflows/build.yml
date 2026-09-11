@@ -30,6 +30,20 @@ jobs:
       - name: Build, test and lint
         run: ./gradlew assembleDebug testDebugUnitTest lintDebug --no-daemon
 
+      # Separate step so a style regression is distinguishable at a glance
+      # from a failing test. Fails only on findings absent from
+      # config/detekt-baseline.xml — the known debt stays silent.
+      - name: Static analysis
+        run: ./gradlew detekt --no-daemon
+
+      - name: Upload detekt report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: detekt-report
+          path: build/reports/detekt/detekt.html
+          if-no-files-found: ignore
+
       - name: Upload lint report
         if: always()
         uses: actions/upload-artifact@v4

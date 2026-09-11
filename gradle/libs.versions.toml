@@ -25,6 +25,7 @@ navigationCompose = "2.9.8"
 biometric = "1.1.0"
 vosk = "0.3.75"
 fragmentKtx = "1.9.0"
+detekt = "1.23.8"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -55,4 +56,5 @@ alphacephei-vosk-android = { group = "com.alphacephei", name = "vosk-android", v
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 
