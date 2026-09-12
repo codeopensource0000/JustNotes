@@ -34,7 +34,14 @@ abstract class JustNotesDatabase : RoomDatabase() {
                     context.applicationContext,
                     JustNotesDatabase::class.java,
                     DATABASE_NAME
-                ).build().also { instance = it }
+                )
+                    // Wired now rather than when the first migration is
+                    // written: an empty array costs nothing, and a migration
+                    // that exists but was never added to the builder fails
+                    // exactly like one that was never written.
+                    .addMigrations(*ALL_MIGRATIONS)
+                    .build()
+                    .also { instance = it }
             }
         }
     }
