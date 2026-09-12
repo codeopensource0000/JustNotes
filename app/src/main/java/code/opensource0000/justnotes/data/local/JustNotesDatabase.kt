@@ -30,19 +30,23 @@ abstract class JustNotesDatabase : RoomDatabase() {
         // database connection instead of opening the SQLite file multiple times.
         fun getInstance(context: Context): JustNotesDatabase {
             return instance ?: synchronized(this) {
-                instance ?: Room.databaseBuilder(
-                    context.applicationContext,
-                    JustNotesDatabase::class.java,
-                    DATABASE_NAME
-                )
-                    // Wired now rather than when the first migration is
-                    // written: an empty array costs nothing, and a migration
-                    // that exists but was never added to the builder fails
-                    // exactly like one that was never written.
-                    .addMigrations(*ALL_MIGRATIONS)
-                    .build()
-                    .also { instance = it }
+                instance ?: buildDatabase(context).also { instance = it }
             }
+        }
+
+        private fun buildDatabase(context: Context): JustNotesDatabase {
+            val builder = Room.databaseBuilder(
+                context.applicationContext,
+                JustNotesDatabase::class.java,
+                DATABASE_NAME
+            )
+            // Added one at a time rather than spread from the array: same
+            // result, and it keeps the builder chain readable while the list
+            // is empty. Wired now rather than when the first migration is
+            // written — a migration that exists but was never handed to the
+            // builder fails exactly like one that was never written.
+            ALL_MIGRATIONS.forEach { builder.addMigrations(it) }
+            return builder.build()
         }
     }
 }
