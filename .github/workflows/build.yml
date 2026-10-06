@@ -30,6 +30,22 @@ jobs:
       - name: Build, test and lint
         run: ./gradlew assembleDebug testDebugUnitTest lintDebug --no-daemon
 
+      # Room rewrites app/schemas/<version>.json on every build, silently and
+      # without a warning. So a developer who changes an entity and forgets to
+      # bump @Database(version) gets a *rewritten* reference schema — and every
+      # runtime check comparing code to that file compares it to itself.
+      #
+      # The real invariant is a property of the history, not of a running
+      # database: a schema file that has been committed must never change
+      # again. Only git can say that, which is why this lives here and not in
+      # a test. Runs after the build, which is what regenerates the files.
+      - name: Committed Room schemas must not have changed
+        run: |
+          if ! git diff --exit-code -- app/schemas; then
+            echo "::error::A committed Room schema was rewritten. An entity changed without @Database(version) being bumped: raise the version and commit the new schema file alongside the old one."
+            exit 1
+          fi
+
       # Separate step so a style regression is distinguishable at a glance
       # from a failing test. Fails only on findings absent from
       # config/detekt-baseline.xml — the known debt stays silent.

@@ -5,25 +5,32 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-// Guards the one failure in this app that has no recovery: a schema change
-// shipped without a migration. Room refuses to open a database whose stored
-// schema does not match the compiled one, so the app dies on launch for
-// everyone who already installed the previous version — and their only way
-// out is to uninstall, which takes their notes with it.
+// The one failure in this app that has no recovery: a schema change shipped
+// without a migration. Room refuses to open a database whose stored schema
+// disagrees with the compiled one, so the app dies on launch for everyone who
+// already installed the previous version, and their only way out is to
+// uninstall — which takes their notes with it.
 //
-// There is only version 1 today, so there is no migration to exercise yet.
-// What these tests do have is the exported schema in app/schemas, and that is
-// enough for the check that matters right now: rebuild a database exactly as
-// the released version created it, then open it with the code as it stands.
-// Room compares its identity hash and refuses if anything drifted.
+// A correction to what an earlier version of this file claimed. It asserted
+// that rebuilding a database from app/schemas and reopening it would catch a
+// drifted entity. It does not: Room *rewrites* that schema file on every
+// build, silently, so both sides of the comparison move together and the
+// check compares the schema to itself. Verified by doing it — adding a column
+// without bumping the version left this test green.
 //
-// Concretely: change a column on NoteEntity, forget to bump `version`, and
-// this test fails. That is the mistake it exists to catch.
+// An oracle has to be independent of the thing it measures. Two now are:
+//   - .github/workflows/build.yml refuses a commit where a schema file
+//     changed, which is where the real invariant lives: a committed schema
+//     must never change again. Only git can see that.
+//   - the identity hash below, written down here rather than read back from
+//     the file Room regenerates.
+//
 @RunWith(AndroidJUnit4::class)
 class MigrationTest {
 
@@ -40,19 +47,29 @@ class MigrationTest {
         .addMigrations(*ALL_MIGRATIONS)
         .build()
 
+    // Room stores the hash of the schema the *compiled code* expects in
+    // room_master_table when it opens a database. Comparing that to a constant
+    // written down here is independent of app/schemas, which is what makes it
+    // a real check rather than a tautology.
     @Test
-    fun schemaVersion1_stillOpensWithTheCurrentCode() {
-        // Built from app/schemas/…/1.json, not from the current entities —
-        // which is the whole point: this is the database a released install
-        // actually has on disk.
+    fun compiledSchema_stillMatchesTheReleasedVersion1() {
         helper.createDatabase(TEST_DB, 1).close()
-
         val database = openWithCurrentCode()
-        // Opening is the assertion: Room validates the stored schema against
-        // the compiled one here and throws if they disagree.
-        val version = database.openHelper.writableDatabase.version
-        assertTrue("the database should open at version 1 or later", version >= 1)
+
+        val compiledHash = database.openHelper.writableDatabase
+            .query("SELECT identity_hash FROM room_master_table LIMIT 1")
+            .use { cursor ->
+                cursor.moveToFirst()
+                cursor.getString(0)
+            }
         database.close()
+
+        if (compiledHash != RELEASED_V1_IDENTITY_HASH) {
+            fail("""The schema has changed since last update.
+             Please increment DB and release new migration and
+             commit new schema""".trimIndent())
+        }
+
     }
 
     @Test
@@ -94,5 +111,10 @@ class MigrationTest {
 
     private companion object {
         const val TEST_DB = "migration-test.db"
+
+        // The schema released as 1.0.0, from
+        // app/schemas/…JustNotesDatabase/1.json at tag v1.0.0. Frozen on
+        // purpose: this is the copy Room cannot rewrite.
+        const val RELEASED_V1_IDENTITY_HASH = "a0c878fc46db28f7b7d383289951698d"
     }
 }

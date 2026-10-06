@@ -168,6 +168,16 @@ android.sourceSets.getByName("androidTest").assets.srcDirs("$projectDir/schemas"
 
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
+    // Pins kotlinx-serialization as a set. Without it the classpath ended up
+    // with json 1.8.1 (pulled in by room-testing) sitting on top of core
+    // 1.7.3 (pinned by lifecycle-viewmodel-savedstate), and json 1.8.1 was
+    // compiled against a GeneratedSerializer interface that core 1.7.3 does
+    // not have. That mismatch cannot fail at compile time — it surfaced as an
+    // AbstractMethodError the first time MigrationTest actually ran.
+    //
+    // Declared on the main classpath rather than androidTest, because AGP's
+    // consistent resolution makes the test classpath follow the app's.
+    implementation(platform(libs.kotlinx.serialization.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
