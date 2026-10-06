@@ -164,7 +164,7 @@ ksp {
 // The exported schemas have to reach the device for MigrationTestHelper to
 // read them: it rebuilds an old database from the JSON, which means the JSON
 // must ship inside the test APK.
-android.sourceSets.getByName("androidTest").assets.srcDirs("$projectDir/schemas")
+android.sourceSets.getByName("androidTest").assets.directories.add("$projectDir/schemas")
 
 dependencies {
     implementation(platform(libs.androidx.compose.bom))

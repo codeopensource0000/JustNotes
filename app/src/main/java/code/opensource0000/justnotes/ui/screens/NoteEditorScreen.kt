@@ -3,6 +3,7 @@ package code.opensource0000.justnotes.ui.screens
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.RepeatMode
@@ -126,7 +127,7 @@ fun NoteEditorScreen(
     }
 
     // Only needed to hand the share sheet a real Activity when exporting.
-    val activity = LocalContext.current as? FragmentActivity
+    val activity = LocalActivity.current as? FragmentActivity
 
     // The stored bytes of a locked note could not be turned back into text.
     // Nothing here can fix that, so the dialog's job is to say so plainly and

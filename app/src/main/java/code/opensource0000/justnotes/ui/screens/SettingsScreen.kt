@@ -1,5 +1,6 @@
 package code.opensource0000.justnotes.ui.screens
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,7 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
@@ -64,7 +64,7 @@ fun SettingsScreen(
     val biometricForNotes by viewModel.biometricForNotesEnabled.collectAsState()
     val dictationLanguage by viewModel.dictationLanguage.collectAsState()
     val appLanguage by viewModel.appLanguage.collectAsState()
-    val activity = LocalContext.current as? FragmentActivity
+    val activity = LocalActivity.current as? FragmentActivity
 
     // Switching the app's display language forces Android to recreate the
     // Activity to apply the new resources, which re-shows the lock screen if
