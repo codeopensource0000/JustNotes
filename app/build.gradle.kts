@@ -32,8 +32,8 @@ android {
         // go backwards. versionName is what people read, and follows semver
         // (see CHANGELOG.md). The two are deliberately independent: a
         // re-publish of the same version bumps the code, not the name.
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

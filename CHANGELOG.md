@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.1.0] — 2026-10-06
+
 ### Added
 - Import notes from `.md` or `.txt` files, from Settings → Data. Several files
   can be picked at once; each becomes a note in the default folder. A leading
@@ -21,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build tooling: AGP 9.4.1, Kotlin 2.4.20, KSP 2.3.12, AndroidX refresh,
   kotlinx-serialization 1.11.0.
 
-## [1.0.0] — not yet released
+## [1.0.0] — 2026-09-11
 
 First public release.
 
