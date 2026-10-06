@@ -1,8 +1,11 @@
 package code.opensource0000.justnotes.ui.screens
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import code.opensource0000.justnotes.data.RoomNotesRepository
+import code.opensource0000.justnotes.export.NoteImporter
 import code.opensource0000.justnotes.security.BiometricShortcut
 import code.opensource0000.justnotes.security.PinManager
 import code.opensource0000.justnotes.settings.AppLanguage
@@ -12,7 +15,9 @@ import code.opensource0000.justnotes.stt.DictationLanguage
 import code.opensource0000.justnotes.stt.VoskModelManager
 import code.opensource0000.justnotes.stt.VoskModelState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
@@ -20,6 +25,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val settingsManager = SettingsManager.getInstance(application)
     private val pinManager = PinManager.forPrimary(application)
     private val voskModelManager = VoskModelManager.getInstance(application)
+    private val notesRepository = RoomNotesRepository.get(application)
 
     // Applying the choice (MainActivity.attachBaseContext + activity.recreate())
     // is handled by the screen, which has the Activity reference; this just
@@ -82,6 +88,40 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     // first — see SettingsScreen and MainActivity's reauth route.
     fun enableAuth() {
         pinManager.setAuthEnabled(true)
+    }
+
+
+    private val _importing = MutableStateFlow(false)
+
+    // Drives a spinner rather than a disabled button: picking twenty files is
+    // twenty database inserts, which is fast but not instant, and a settings
+    // row that looks inert is indistinguishable from one that did nothing.
+    val importing: StateFlow<Boolean> = _importing.asStateFlow()
+
+    private val _importOutcome = MutableStateFlow<NoteImporter.Outcome?>(null)
+
+    // Non-null means there is a result the user has not acknowledged yet. An
+    // import that silently adds notes to a folder the user is not looking at
+    // is indistinguishable from one that failed, so the count is always
+    // reported back — including when it is zero.
+    val importOutcome: StateFlow<NoteImporter.Outcome?> = _importOutcome.asStateFlow()
+
+    fun importNotes(uris: List<Uri>) {
+        // The picker returns an empty list when the user backs out of it,
+        // which is a cancellation and not a result worth a dialog.
+        if (uris.isEmpty()) return
+        viewModelScope.launch {
+            _importing.value = true
+            // NoteImporter does its own withContext(Dispatchers.IO); launching
+            // on the main dispatcher keeps the two state writes above and
+            // below on the thread Compose reads them from.
+            _importOutcome.value = NoteImporter.importAll(getApplication(), notesRepository, uris)
+            _importing.value = false
+        }
+    }
+
+    fun acknowledgeImportOutcome() {
+        _importOutcome.value = null
     }
 
     val screenshotsAllowed: StateFlow<Boolean> = settingsManager.screenshotsAllowed

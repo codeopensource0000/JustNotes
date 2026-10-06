@@ -121,4 +121,19 @@
     <string name="settings_stt_delete">Supprimer</string>
     <string name="settings_stt_error">Échec de l\'installation, réessayez</string>
     <string name="settings_stt_retry">Réessayer</string>
+    <string name="action_ok">OK</string>
+    <string name="settings_section_data">Données</string>
+    <string name="settings_import">Importer des notes</string>
+    <string name="settings_import_sub">Fichiers texte (.txt, .md). Les notes importées arrivent déverrouillées.</string>
+    <string name="settings_import_running">Import en cours\u2026</string>
+    <string name="settings_import_done_title">Import terminé</string>
+    <string name="settings_import_none">Aucune note n\'a pu être importée.</string>
+    <plurals name="settings_import_added">
+        <item quantity="one">%1$d note ajoutée.</item>
+        <item quantity="other">%1$d notes ajoutées.</item>
+    </plurals>
+    <plurals name="settings_import_rejected">
+        <item quantity="one">%1$d fichier ignoré : il n\'était pas lisible comme texte.</item>
+        <item quantity="other">%1$d fichiers ignorés : ils n\'étaient pas lisibles comme texte.</item>
+    </plurals>
 </resources>

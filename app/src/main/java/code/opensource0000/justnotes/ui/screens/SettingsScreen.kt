@@ -1,6 +1,8 @@
 package code.opensource0000.justnotes.ui.screens
 
 import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,11 +35,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import code.opensource0000.justnotes.R
+import code.opensource0000.justnotes.export.NoteImporter
 import code.opensource0000.justnotes.settings.AppLanguage
 import code.opensource0000.justnotes.settings.ThemeMode
 import code.opensource0000.justnotes.stt.DictationLanguage
@@ -64,7 +68,20 @@ fun SettingsScreen(
     val biometricForNotes by viewModel.biometricForNotesEnabled.collectAsState()
     val dictationLanguage by viewModel.dictationLanguage.collectAsState()
     val appLanguage by viewModel.appLanguage.collectAsState()
+    val importing by viewModel.importing.collectAsState()
+    val importOutcome by viewModel.importOutcome.collectAsState()
     val activity = LocalActivity.current as? FragmentActivity
+
+    // OpenMultipleDocuments rather than GetMultipleContents: it goes through
+    // the system document picker, which grants this app a read permission for
+    // each URI it returns and can reach any provider the phone has — Files,
+    // Drive, a USB stick — instead of only apps implementing ACTION_GET_CONTENT.
+    //
+    // Backing out of the picker returns an empty list, which importNotes
+    // treats as the cancellation it is.
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris -> viewModel.importNotes(uris) }
 
     // Switching the app's display language forces Android to recreate the
     // Activity to apply the new resources, which re-shows the lock screen if
@@ -236,9 +253,59 @@ fun SettingsScreen(
                 }
             }
 
+            SectionLabel(text = stringResource(R.string.settings_section_data))
+            ImportRow(
+                busy = importing,
+                onClick = { importLauncher.launch(NoteImporter.ACCEPTED_MIME_TYPES) }
+            )
+
             SectionLabel(text = stringResource(R.string.settings_section_about))
             NavigationRow(text = stringResource(R.string.about_title), onClick = onOpenAbout)
         }
+    }
+
+
+    val outcome = importOutcome
+    if (outcome != null) {
+        AlertDialog(
+            onDismissRequest = viewModel::acknowledgeImportOutcome,
+            title = { Text(text = stringResource(R.string.settings_import_done_title)) },
+            text = {
+                Column {
+                    Text(
+                        text = if (outcome.imported > 0) {
+                            pluralStringResource(
+                                R.plurals.settings_import_added,
+                                outcome.imported,
+                                outcome.imported
+                            )
+                        } else {
+                            stringResource(R.string.settings_import_none)
+                        }
+                    )
+                    // Named counts only, never the file names: a rejected file
+                    // is one the app could not read, so its name is the least
+                    // reliable thing about it.
+                    if (outcome.rejected.isNotEmpty()) {
+                        Text(
+                            text = pluralStringResource(
+                                R.plurals.settings_import_rejected,
+                                outcome.rejected.size,
+                                outcome.rejected.size
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = viewModel::acknowledgeImportOutcome) {
+                    Text(text = stringResource(R.string.action_ok))
+                }
+            }
+        )
     }
 
     val targetLanguage = pendingAppLanguage
@@ -335,6 +402,44 @@ private fun voskModelStateLabel(state: VoskModelState): String = when (state) {
     VoskModelState.INSTALLING -> stringResource(R.string.settings_stt_installing)
     VoskModelState.READY -> stringResource(R.string.settings_stt_ready)
     VoskModelState.ERROR -> stringResource(R.string.settings_stt_error)
+}
+
+@Composable
+private fun ImportRow(busy: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            // Not clickable while an import runs: a second tap would open the
+            // picker again and the two results would race on the same folder.
+            .clickable(enabled = !busy, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_import),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = if (busy) {
+                    stringResource(R.string.settings_import_running)
+                } else {
+                    stringResource(R.string.settings_import_sub)
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        if (busy) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp))
+        } else {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }
 
 @Composable

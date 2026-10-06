@@ -25,6 +25,8 @@ One honest qualification, since the point of writing this down is to be accurate
 - Folders: create them from the home screen, open one to browse its notes, move a note between folders or delete it via a long-press menu (with haptic feedback), delete a folder (its notes go with it — the catch-all default folder is exempt from deletion).
 - Recents and Folders tabs on the home screen; a folder-picker chip inside the editor lets you reassign a note's folder (or create a new one) without leaving it.
 - Export any note as plain text, Markdown, or HTML through the normal Android share sheet — export is the one deliberate "escape hatch" from the app; nothing is protected once it leaves via export, by design.
+- Import notes from text files: **Settings → Data → Import notes**, which accepts any number of `.md` or `.txt` files at once. Parsing is deliberately permissive — a leading Markdown heading becomes the note's title, YAML front matter is stripped, and a file with no heading at all is imported whole and titled after its file name. Nothing is required of the file beyond being text. Imported notes always arrive **unlocked**: a plain text file carries no code and no key, so a locked note cannot be restored as locked.
+- Together, export and import are the migration path between phones, since Android's own device-to-device transfer is deliberately disabled (see below).
 
 ### Security
 - Primary app-open code (6 digits) with fingerprint/biometric unlock (auto-prompted the moment the lock screen appears), disableable without losing the saved code.
@@ -132,6 +134,7 @@ could not reach the network even if it tried.
 | Encryption keys | Nowhere | Rebuilt from the code each time, held in memory only |
 | Voice models | App storage, after you install one from Settings | Unpacked from the APK, never downloaded |
 | Exports | Cache, until the next app launch | Plain text, cleared at every start |
+| Imports | Nothing kept | The file is read once; no copy is made |
 
 The only permission requested is `RECORD_AUDIO`, and only when you first use
 voice dictation. Recognition runs entirely on the device; no audio leaves the

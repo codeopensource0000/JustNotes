@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+- Import notes from `.md` or `.txt` files, from Settings → Data. Several files
+  can be picked at once; each becomes a note in the default folder. A leading
+  Markdown heading (any level, including the underlined form) becomes the
+  title, YAML front matter is stripped, and a file without a heading is
+  imported whole and titled after its file name. Files that are not text are
+  skipped and counted rather than failing the import.
+- Imported notes arrive unlocked, which is a limit and not a choice: a plain
+  text file carries neither a code nor a Keystore key.
+
+### Changed
+- Build tooling: AGP 9.4.1, Kotlin 2.4.20, KSP 2.3.12, AndroidX refresh,
+  kotlinx-serialization 1.11.0.
 
 ## [1.0.0] — not yet released
 
